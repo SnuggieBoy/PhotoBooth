@@ -10,6 +10,9 @@ import {
   Image as ImageIcon,
   Eye,
   EyeOff,
+  Zap,
+  Play,
+  RotateCcw,
 } from 'lucide-react'
 import { soundFX } from '../utils/audio'
 import { useLanguage } from '../i18n/LanguageContext'
@@ -43,6 +46,7 @@ export default function CameraView({
   const ringBufferRef = useRef(new ShotRingBuffer(60))
   const [stream, setStream] = useState(null)
 
+  // Camera Settings
   const [localFacingMode, setLocalFacingMode] = useState('user')
   const facingMode = propFacingMode !== undefined ? propFacingMode : localFacingMode
   const setFacingMode = propSetFacingMode || setLocalFacingMode
@@ -55,8 +59,14 @@ export default function CameraView({
   const isUltraWide = propIsUltraWide !== undefined ? propIsUltraWide : localIsUltraWide
   const setIsUltraWide = propSetIsUltraWide || setLocalIsUltraWide
 
-  const [isCountingDown, setIsCountingDown] = useState(false)
+  // Shooting Engine State: 'idle' | 'countdown' | 'flash' | 'pose_transition'
+  const [shootingState, setShootingState] = useState('idle')
   const [countdown, setCountdown] = useState(countdownDuration)
+  const [poseBreakCountdown, setPoseBreakCountdown] = useState(2)
+
+  // Auto Sequence vs Manual Shutter Mode (Default true = Auto 4-Cut like real Korean booth)
+  const [isAutoSequence, setIsAutoSequence] = useState(true)
+
   const [isFlashing, setIsFlashing] = useState(false)
   const [hasPermission, setHasPermission] = useState(null)
   const [soundEnabled, setSoundEnabled] = useState(true)
@@ -114,7 +124,7 @@ export default function CameraView({
   // Sample pre-shot frames at 24 fps during countdown for Boomerang
   useEffect(() => {
     let sampleTimer = null
-    if (isCountingDown) {
+    if (shootingState === 'countdown') {
       sampleTimer = setInterval(async () => {
         const video = videoRef.current
         if (!video || video.readyState < 2) return
@@ -133,26 +143,26 @@ export default function CameraView({
     return () => {
       if (sampleTimer) clearInterval(sampleTimer)
     }
-  }, [isCountingDown])
+  }, [shootingState])
 
   // MediaPipe Gesture Recognition loop (Runs decoupled at ~8 Hz)
   useEffect(() => {
     let gestureInterval = null
     let isDisposed = false
 
-    if (gestureEnabled && !isCountingDown) {
+    if (gestureEnabled && shootingState === 'idle') {
       initGestureRecognizer().then((recognizer) => {
         if (!recognizer || isDisposed) return
 
         gestureInterval = setInterval(() => {
-          if (!videoRef.current || isCountingDown) return
+          if (!videoRef.current || shootingState !== 'idle') return
           const gesture = detectGesture(videoRef.current)
 
           if (gesture === 'Victory' || gesture === 'Open_Palm') {
             const label = gesture === 'Victory' ? '✌️ Chữ V (Victory)' : '🖐️ Mở Lòng Bàn Tay'
             setGestureToast(`${label}! Bắt đầu chụp...`)
-            setTimeout(() => setGestureToast(null), 2500)
-            triggerCapture()
+            setTimeout(() => setGestureToast(null), 2000)
+            startCountdownSequence()
           }
         }, 125)
       })
@@ -162,12 +172,38 @@ export default function CameraView({
       isDisposed = true
       if (gestureInterval) clearInterval(gestureInterval)
     }
-  }, [gestureEnabled, isCountingDown])
+  }, [gestureEnabled, shootingState])
 
-  // Handle countdown trigger
-  const triggerCapture = () => {
-    if (isCountingDown) return
-    setIsCountingDown(true)
+  // AUTO SEQUENCE CONTROLLER:
+  // When currentShotIndex changes and auto-sequence is active, trigger 2s pose change break, then next shot
+  useEffect(() => {
+    if (!isAutoSequence || isRetakingSingleShot) return
+    if (currentShotIndex === 0) return // First shot is triggered by user click/gesture
+    if (currentShotIndex >= shotsCount) return // All shots done
+
+    // We just took a shot, now in pose transition break for the next pose!
+    setShootingState('pose_transition')
+    setPoseBreakCountdown(2)
+
+    let breakTimer = 2
+    const breakInterval = setInterval(() => {
+      breakTimer -= 1
+      if (breakTimer > 0) {
+        setPoseBreakCountdown(breakTimer)
+      } else {
+        clearInterval(breakInterval)
+        startCountdownSequence()
+      }
+    }, 1000)
+
+    return () => clearInterval(breakInterval)
+  }, [currentShotIndex, isAutoSequence, shotsCount, isRetakingSingleShot])
+
+  // Start the 3.. 2.. 1.. countdown for the current shot
+  const startCountdownSequence = () => {
+    if (shootingState === 'countdown' || shootingState === 'flash') return
+
+    setShootingState('countdown')
     setCountdown(countdownDuration)
 
     if (soundEnabled) soundFX.playBeep(false)
@@ -181,15 +217,21 @@ export default function CameraView({
       } else {
         clearInterval(interval)
         setCountdown(0)
-        capturePhoto()
+        executePhotoCapture()
       }
     }, 1000)
   }
 
-  // Capture high-res frame from video stream
-  const capturePhoto = () => {
+  // Execute snapshot capture from video stream
+  const executePhotoCapture = () => {
     const video = videoRef.current
-    if (!video) return
+    if (!video) {
+      setShootingState('idle')
+      setCountdown(countdownDuration)
+      return
+    }
+
+    setShootingState('flash')
 
     if (soundEnabled) {
       soundFX.playBeep(true)
@@ -223,9 +265,24 @@ export default function CameraView({
     ringBufferRef.current.clear()
 
     setTimeout(() => {
-      setIsCountingDown(false)
+      // Reset countdown cleanly so it NEVER gets stuck at 0
+      setCountdown(countdownDuration)
+
+      if (isRetakingSingleShot || currentShotIndex + 1 >= shotsCount) {
+        setShootingState('idle')
+      } else if (!isAutoSequence) {
+        setShootingState('idle')
+      }
+      // If isAutoSequence, the useEffect on currentShotIndex will set 'pose_transition'
+
       onPhotoTaken(dataUrl, capturedVideoFrames)
-    }, 400)
+    }, 350)
+  }
+
+  // Cancel/stop shooting sequence
+  const handleCancelSequence = () => {
+    setShootingState('idle')
+    setCountdown(countdownDuration)
   }
 
   const toggleFacingMode = () => {
@@ -240,7 +297,7 @@ export default function CameraView({
   const isCustomFrame = selectedFrame?.type === 'image' && selectedFrame?.imageUrl
 
   return (
-    <div className="relative w-full max-w-xl mx-auto aspect-[3/4] sm:aspect-[4/3] bg-neutral-900 rounded-3xl overflow-hidden shadow-2xl border-4 border-white/80 select-none">
+    <div className="relative w-full max-w-xl mx-auto aspect-[3/4] sm:aspect-[4/3] bg-neutral-900 rounded-3xl overflow-hidden shadow-2xl border-4 border-white select-none">
       {/* Flash effect overlay */}
       {isFlashing && (
         <div className="absolute inset-0 bg-white z-50 animate-out fade-out duration-300 pointer-events-none" />
@@ -285,7 +342,7 @@ export default function CameraView({
               />
             </div>
           ) : (
-            /* Preset Themed Frame Live Guide (Corner decorations + photo alignment box) */
+            /* Preset Themed Frame Live Guide */
             <>
               {/* Top Header Tag Guide */}
               <div className="flex items-center justify-between text-xs font-black drop-shadow-md">
@@ -312,12 +369,7 @@ export default function CameraView({
                   borderColor: selectedFrame.border || '#ff3d96',
                 }}
                 className="w-full h-2/3 border-2 border-dashed rounded-2xl opacity-40 mx-auto flex items-center justify-center"
-              >
-                <div className="w-8 h-8 border-t-2 border-l-2 border-current rounded-tl-lg absolute top-16 left-6" />
-                <div className="w-8 h-8 border-t-2 border-r-2 border-current rounded-tr-lg absolute top-16 right-6" />
-                <div className="w-8 h-8 border-b-2 border-l-2 border-current rounded-bl-lg absolute bottom-16 left-6" />
-                <div className="w-8 h-8 border-b-2 border-r-2 border-current rounded-br-lg absolute bottom-16 right-6" />
-              </div>
+              />
 
               {/* Bottom Footer Tag Guide */}
               <div className="flex items-center justify-between text-xs font-black drop-shadow-md">
@@ -388,16 +440,47 @@ export default function CameraView({
         </div>
       )}
 
-      {/* Countdown Big Overlay */}
-      {isCountingDown && (
-        <div className="absolute inset-0 bg-black/35 backdrop-blur-xs flex items-center justify-center z-40 pointer-events-none">
+      {/* OVERLAY 1: ACTIVE COUNTDOWN OVERLAY */}
+      {shootingState === 'countdown' && (
+        <div className="absolute inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center z-40 pointer-events-none animate-fade-in">
           <div className="text-center animate-bounce">
-            <span className="text-8xl sm:text-9xl font-black text-pink-300 drop-shadow-[0_0_35px_rgba(255,61,150,0.95)]">
+            <span className="text-8xl sm:text-9xl font-black text-pink-300 drop-shadow-[0_0_40px_rgba(255,61,150,0.95)]">
               {countdown > 0 ? countdown : '📸'}
             </span>
             <p className="text-white text-lg font-black tracking-wider mt-4 uppercase drop-shadow-md">
-              {countdown > 0 ? t('countdown_prep') : t('countdown_smile')}
+              {countdown > 0 ? `Pose ${currentShotIndex + 1}/${shotsCount}: Chuẩn bị...` : 'Tách! Cười lên nào ✨'}
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* OVERLAY 2: POSE TRANSITION BREAK (KIOSK AUTO SEQUENCE) */}
+      {shootingState === 'pose_transition' && (
+        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center z-40 text-center p-6 animate-fade-in">
+          <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-[#FF3D96] to-purple-600 flex items-center justify-center text-white text-2xl font-black mb-3 shadow-xl shadow-pink-500/40 animate-pulse">
+            {poseBreakCountdown}s
+          </div>
+          <h3 className="text-xl sm:text-2xl font-black text-white drop-shadow-md">
+            Đổi Dáng Tiếp Theo Nào! ✨
+          </h3>
+          <p className="text-sm font-bold text-pink-300 mt-1">
+            Chuẩn bị Pose {currentShotIndex + 1} / {shotsCount}
+          </p>
+
+          <div className="mt-5 flex items-center gap-3">
+            <button
+              onClick={handleCancelSequence}
+              className="px-4 py-2 rounded-full bg-white/20 hover:bg-white/30 text-white text-xs font-bold transition active:scale-95 cursor-pointer backdrop-blur-md"
+            >
+              Tạm Dừng Chụp
+            </button>
+            <button
+              onClick={startCountdownSequence}
+              className="px-5 py-2 rounded-full bg-[#FF3D96] hover:bg-[#E62E84] text-white text-xs font-black transition active:scale-95 cursor-pointer shadow-lg shadow-pink-500/30 flex items-center gap-1.5"
+            >
+              <span>Chụp Luôn</span>
+              <Play size={13} />
+            </button>
           </div>
         </div>
       )}
@@ -411,10 +494,28 @@ export default function CameraView({
             <span className="w-2.5 h-2.5 rounded-full bg-[#FF3D96] animate-pulse" />
             <span className="text-xs font-black text-[#29252C] tracking-wide">
               {isRetakingSingleShot
-                ? `#${retakeIndex + 1}`
-                : `${t('shot_indicator')} ${currentShotIndex + 1}/${shotsCount}`}
+                ? `Chụp lại #${retakeIndex + 1}`
+                : `Pose ${currentShotIndex + 1}/${shotsCount}`}
             </span>
           </div>
+
+          {/* Mode Toggle: Auto Sequence (Kiosk) vs Manual Shot */}
+          {!isRetakingSingleShot && (
+            <button
+              onClick={() => setIsAutoSequence(!isAutoSequence)}
+              className={`h-9 px-2.5 sm:px-3 rounded-full backdrop-blur-md border flex items-center gap-1.5 text-xs font-black transition active:scale-95 cursor-pointer shadow-md ${
+                isAutoSequence
+                  ? 'bg-gradient-to-r from-amber-500 to-orange-500 border-amber-400 text-white'
+                  : 'bg-white/95 border-pink-200 text-[#29252C] hover:text-[#FF3D96]'
+              }`}
+              title="Chuyển chế độ: Tự động chụp 4 pose liên tục hoặc bấm từng tấm"
+            >
+              {isAutoSequence ? <Zap size={14} /> : <Hand size={14} />}
+              <span className="hidden sm:inline">
+                {isAutoSequence ? 'Tự Động 4 Pose' : 'Bấm Từng Tấm'}
+              </span>
+            </button>
+          )}
 
           {/* Frame Selection Modal Button */}
           {onOpenFrameModal && (
@@ -428,24 +529,9 @@ export default function CameraView({
               title="Chọn khung hỗ trợ chụp hoặc tải khung từ điện thoại"
             >
               <ImageIcon size={15} />
-              <span className="max-w-[80px] sm:max-w-[130px] truncate">
+              <span className="max-w-[80px] sm:max-w-[110px] truncate">
                 {hasThemedFrame ? selectedFrame.name : 'Khung'}
               </span>
-            </button>
-          )}
-
-          {/* Toggle Guide View button if frame is selected */}
-          {hasThemedFrame && (
-            <button
-              onClick={() => setShowFrameGuide(!showFrameGuide)}
-              className={`w-9 h-9 rounded-full backdrop-blur-md border flex items-center justify-center transition active:scale-95 cursor-pointer shadow-sm ${
-                showFrameGuide
-                  ? 'bg-white/95 text-[#FF3D96] border-pink-200'
-                  : 'bg-black/50 text-white/70 border-white/20'
-              }`}
-              title={showFrameGuide ? 'Ẩn khung căn góc' : 'Hiện khung căn góc'}
-            >
-              {showFrameGuide ? <Eye size={15} /> : <EyeOff size={15} />}
             </button>
           )}
         </div>
@@ -476,8 +562,7 @@ export default function CameraView({
             }`}
             title="Làm mịn da AI Bojeong"
           >
-            <span>{BEAUTY_LEVELS[beautyLevel].icon}</span>
-            <span className="hidden md:inline">{BEAUTY_LEVELS[beautyLevel].label}</span>
+            <span>{BEAUTY_LEVELS[beautyLevel]?.icon || '✨'}</span>
           </button>
 
           {/* 0.5x Ultra Wide Lens Toggle */}
@@ -513,17 +598,35 @@ export default function CameraView({
         </div>
       </div>
 
-      {/* Bottom Shutter Button */}
-      <div className="absolute bottom-4 sm:bottom-5 inset-x-0 flex items-center justify-center z-30 pointer-events-auto">
+      {/* Bottom Shutter Action Button & Info */}
+      <div className="absolute bottom-4 sm:bottom-5 inset-x-0 flex flex-col items-center justify-center z-30 pointer-events-auto gap-2">
+        {/* Shutter Button */}
         <button
-          disabled={isCountingDown || hasPermission === false}
-          onClick={triggerCapture}
+          disabled={shootingState !== 'idle' || hasPermission === false}
+          onClick={startCountdownSequence}
           className="group relative p-2 rounded-full bg-white/30 hover:bg-white/40 backdrop-blur-md transition active:scale-95 disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
         >
           <div className="w-16 h-16 sm:w-18 sm:h-18 rounded-full bg-gradient-to-tr from-[#FF3D96] to-[#FF6BA8] flex items-center justify-center shadow-[0_0_25px_rgba(255,61,150,0.7)] group-hover:shadow-[0_0_35px_rgba(255,61,150,0.9)] transition-all">
             <Camera size={28} className="text-white group-hover:scale-110 transition-transform" />
           </div>
         </button>
+
+        {/* Dynamic Status / Action Label below Shutter */}
+        <div className="bg-black/60 backdrop-blur-md px-3.5 py-1 rounded-full text-white text-[11px] font-bold border border-white/20">
+          {shootingState === 'idle' ? (
+            isAutoSequence ? (
+              <span>⚡ Bấm nút để tự động chụp trọn bộ {shotsCount} pose</span>
+            ) : (
+              <span>📸 Bấm nút để chụp Pose {currentShotIndex + 1}/{shotsCount}</span>
+            )
+          ) : shootingState === 'countdown' ? (
+            <span>Đang đếm ngược... Cười lên nào! ✨</span>
+          ) : shootingState === 'pose_transition' ? (
+            <span>Đang chuẩn bị pose tiếp theo ({poseBreakCountdown}s)...</span>
+          ) : (
+            <span>Đang chụp...</span>
+          )}
+        </div>
       </div>
     </div>
   )

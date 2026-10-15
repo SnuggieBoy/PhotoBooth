@@ -3,6 +3,7 @@ import {
   Sparkles,
   ArrowLeft,
   ArrowRight,
+  Check,
   CheckCircle,
   Sliders,
   Palette,
@@ -18,13 +19,21 @@ import {
   Maximize2,
   Eye,
   EyeOff,
-  Smile,
+  Zap,
 } from 'lucide-react'
 import { FILTERS, FRAME_COLORS } from '../utils/filters'
 import { COLLAB_FRAMES } from '../utils/collabFrames'
 import { PRESET_FRAMES } from '../utils/frameTemplates'
 import { BEAUTY_LEVELS } from '../utils/aiVision'
 import { useLanguage, LanguageSelector } from '../i18n/LanguageContext'
+
+// Demo portrait photos to render real photobooth sample previews for all options
+const SAMPLE_PORTRAITS = [
+  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=400&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=400&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80',
+]
 
 export default function StyleSelectScreen({
   layout,
@@ -58,33 +67,33 @@ export default function StyleSelectScreen({
   const [showMoreOptions, setShowMoreOptions] = useState(false)
   const [showFrameGuide, setShowFrameGuide] = useState(true)
 
-  // Layout choices with visual miniatures
+  // Layout choices with visual miniatures containing real photo cutouts
   const layoutItems = [
     {
       id: 'strip-4',
-      title: t('layout_strip4'),
-      sub: t('layout_strip4_sub'),
+      title: '4-Cut Dọc',
+      sub: '1x4 Classic Life4Cuts',
       slots: 4,
       type: '1x4',
     },
     {
       id: 'grid-4',
-      title: t('layout_grid4'),
-      sub: t('layout_grid4_sub'),
+      title: '4-Cut Ô Vuông',
+      sub: '2x2 Photoism Style',
       slots: 4,
       type: '2x2',
     },
     {
       id: 'strip-2',
-      title: t('layout_strip2'),
-      sub: t('layout_strip2_sub'),
+      title: '2-Cut Polaroid',
+      sub: 'Duo Moments',
       slots: 2,
       type: '1x2',
     },
   ]
 
-  // Top trending frame quick picks
-  const quickPickFrames = PRESET_FRAMES.slice(0, 8)
+  // Top trending frame quick visual cards
+  const topVisualFrames = PRESET_FRAMES.slice(1, 9)
 
   // AI Beauty Bojeong filter CSS
   const activeBeautyCss = BEAUTY_LEVELS[beautyLevel]?.css || ''
@@ -152,7 +161,7 @@ export default function StyleSelectScreen({
   return (
     <div className="min-h-screen bg-[#FFFDF9] text-[#29252C] flex flex-col justify-between">
       {/* Top Header */}
-      <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-pink-100/80 px-4 py-3 sm:px-8">
+      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-pink-100/80 px-4 py-3 sm:px-8">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <button
             onClick={onBack}
@@ -168,7 +177,7 @@ export default function StyleSelectScreen({
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
             </h2>
             <p className="text-[10px] text-[#766F7B] font-medium hidden sm:block">
-              Xem trước trực tiếp trên gương và tùy chỉnh phong cách trước khi chụp
+              Xem trước hình ảnh trực quan và soi gương trực tiếp trước khi chụp
             </p>
           </div>
 
@@ -176,7 +185,7 @@ export default function StyleSelectScreen({
         </div>
       </header>
 
-      {/* Main Studio Viewport: Live Camera Mirror + Style Control Deck */}
+      {/* Main Studio Viewport: Live Camera Mirror + 100% Visual Style Selector */}
       <main className="max-w-6xl w-full mx-auto px-4 py-4 sm:py-6 flex-1 pb-32">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
           {/* ================= LEFT COLUMN: LIVE CAMERA MIRROR ================= */}
@@ -315,7 +324,6 @@ export default function StyleSelectScreen({
 
               {/* Camera Overlaid Controls Bar (Top) */}
               <div className="absolute top-3 inset-x-3 flex items-center justify-between z-30 pointer-events-auto">
-                {/* Live Indicator Badge */}
                 <div className="bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full flex items-center gap-1.5 border border-white/20 text-white">
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                   <span className="text-[10px] font-black uppercase tracking-wider">
@@ -323,9 +331,7 @@ export default function StyleSelectScreen({
                   </span>
                 </div>
 
-                {/* Camera Quick Action Toggles */}
                 <div className="flex items-center gap-1.5">
-                  {/* AI Beauty Bojeong Level Button */}
                   <button
                     onClick={cycleBeautyLevel}
                     className={`h-7 px-2 rounded-full backdrop-blur-md border flex items-center gap-1 text-[10px] font-black transition active:scale-95 cursor-pointer ${
@@ -339,7 +345,6 @@ export default function StyleSelectScreen({
                     <span className="hidden sm:inline">{BEAUTY_LEVELS[beautyLevel]?.label || 'Bojeong'}</span>
                   </button>
 
-                  {/* 0.5x Ultra-wide Toggle */}
                   <button
                     onClick={toggleUltraWide}
                     className={`h-7 px-2 rounded-full backdrop-blur-md border text-[10px] font-black transition active:scale-95 cursor-pointer ${
@@ -352,7 +357,6 @@ export default function StyleSelectScreen({
                     {isUltraWide ? '0.5x' : '1.0x'}
                   </button>
 
-                  {/* Guide Toggle */}
                   {hasThemedFrame && (
                     <button
                       onClick={() => setShowFrameGuide(!showFrameGuide)}
@@ -367,7 +371,6 @@ export default function StyleSelectScreen({
                     </button>
                   )}
 
-                  {/* Camera Flip */}
                   <button
                     onClick={toggleFacingMode}
                     className="w-7 h-7 rounded-full bg-black/50 backdrop-blur-md border border-white/20 text-white flex items-center justify-center hover:bg-black/70 transition active:scale-95 cursor-pointer"
@@ -378,7 +381,7 @@ export default function StyleSelectScreen({
                 </div>
               </div>
 
-              {/* Bottom active filter pill on mirror */}
+              {/* Bottom active pill on mirror */}
               <div className="absolute bottom-3 inset-x-3 flex items-center justify-between z-30 pointer-events-none">
                 <span className="bg-black/60 backdrop-blur-md text-white text-[10px] font-bold px-2.5 py-1 rounded-full border border-white/20">
                   {t(selectedFilter?.nameKey) || selectedFilter?.name}
@@ -391,73 +394,78 @@ export default function StyleSelectScreen({
               </div>
             </div>
 
-            {/* Hint below camera mirror */}
             <p className="mt-2 text-center text-[11px] text-[#766F7B] font-medium flex items-center justify-center gap-1.5">
               <span>💡</span>
-              <span>Gương xem trước trực tiếp: chọn bộ lọc & khung để thấy ngay hiệu ứng!</span>
+              <span>Gương xem trước trực tiếp: chọn ảnh dưới đây để thấy hiệu ứng ngay trên mặt!</span>
             </p>
           </div>
 
-          {/* ================= RIGHT COLUMN: INTERACTIVE STYLE CONTROL DECK ================= */}
+          {/* ================= RIGHT COLUMN: 100% VISUAL STYLE CONTROL DECK ================= */}
           <div className="lg:col-span-7 space-y-6">
-            {/* 1. CHỌN BỐ CỤC DẢI ẢNH */}
+            {/* 1. CHỌN BỐ CỤC DẢI ẢNH (MINIATURE PHOTO STRIP PREVIEWS) */}
             <section className="bg-white p-4 sm:p-5 rounded-3xl border border-pink-100 shadow-xs space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm sm:text-base font-black text-[#29252C] flex items-center gap-2">
                   <span className="w-6 h-6 rounded-lg bg-pink-100 text-[#FF3D96] flex items-center justify-center text-xs font-black">
                     1
                   </span>
-                  <span>{t('layout_title')}</span>
+                  <span>Chọn Kiểu Dải Ảnh (Layout)</span>
                 </h3>
                 <span className="text-xs font-black text-[#FF3D96] bg-pink-50 px-2.5 py-0.5 rounded-full border border-pink-100">
                   {layout === 'strip-2' ? '2 Poses' : '4 Poses'}
                 </span>
               </div>
 
-              <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 {layoutItems.map((item) => {
                   const isSelected = layout === item.id
                   return (
                     <button
                       key={item.id}
                       onClick={() => setLayout(item.id)}
-                      className={`p-3 rounded-2xl border-2 text-center transition-all cursor-pointer relative flex flex-col items-center justify-between gap-2 ${
+                      className={`p-2.5 sm:p-3 rounded-2xl border-2 transition-all cursor-pointer relative flex flex-col items-center justify-between gap-2 group ${
                         isSelected
-                          ? 'border-[#FF3D96] bg-pink-50/50 shadow-md shadow-pink-500/10'
-                          : 'border-pink-100 bg-[#FFFDF9] hover:border-pink-200'
+                          ? 'border-[#FF3D96] bg-pink-50/50 shadow-md shadow-pink-500/10 ring-2 ring-pink-300'
+                          : 'border-pink-100 bg-[#FFFDF9] hover:border-pink-300'
                       }`}
                     >
-                      {/* Visual mini representation */}
-                      <div className="w-10 h-14 bg-pink-100/60 rounded-md border border-pink-200/60 p-1 flex flex-col justify-between items-center">
+                      {/* REAL MINI PHOTO STRIP SHOWCASE */}
+                      <div className="w-16 h-28 bg-white rounded-xl border border-pink-200 p-1 flex flex-col justify-between items-center shadow-xs overflow-hidden">
                         {item.id === 'strip-4' && (
                           <div className="w-full flex flex-col justify-between h-full gap-0.5">
-                            {[0, 1, 2, 3].map((n) => (
-                              <div key={n} className="w-full h-2 bg-pink-300/80 rounded-xs" />
+                            {SAMPLE_PORTRAITS.map((url, idx) => (
+                              <div key={idx} className="w-full h-5 rounded-xs overflow-hidden bg-neutral-100">
+                                <img src={url} alt={`Pose ${idx + 1}`} className="w-full h-full object-cover" />
+                              </div>
                             ))}
                           </div>
                         )}
                         {item.id === 'grid-4' && (
                           <div className="w-full grid grid-cols-2 gap-0.5 h-full">
-                            {[0, 1, 2, 3].map((n) => (
-                              <div key={n} className="w-full bg-pink-300/80 rounded-xs" />
+                            {SAMPLE_PORTRAITS.map((url, idx) => (
+                              <div key={idx} className="w-full h-11 rounded-xs overflow-hidden bg-neutral-100">
+                                <img src={url} alt={`Pose ${idx + 1}`} className="w-full h-full object-cover" />
+                              </div>
                             ))}
                           </div>
                         )}
                         {item.id === 'strip-2' && (
                           <div className="w-full flex flex-col justify-around h-full gap-1">
-                            {[0, 1].map((n) => (
-                              <div key={n} className="w-full h-4 bg-pink-300/80 rounded-xs" />
+                            {SAMPLE_PORTRAITS.slice(0, 2).map((url, idx) => (
+                              <div key={idx} className="w-full h-11 rounded-xs overflow-hidden bg-neutral-100">
+                                <img src={url} alt={`Pose ${idx + 1}`} className="w-full h-full object-cover" />
+                              </div>
                             ))}
                           </div>
                         )}
                       </div>
 
-                      <div>
-                        <p className="font-black text-xs text-[#29252C] leading-tight">
+                      <div className="text-center w-full">
+                        <p className="font-black text-xs text-[#29252C] truncate">
                           {item.title}
                         </p>
-                        <p className="text-[9px] text-[#766F7B] mt-0.5 hidden sm:block">
-                          {item.sub}
+                        <p className="text-[9px] text-[#766F7B] font-bold">
+                          {item.type}
                         </p>
                       </div>
                     </button>
@@ -466,147 +474,58 @@ export default function StyleSelectScreen({
               </div>
             </section>
 
-            {/* 2. KHUNG HỖ TRỢ CHỤP (THEMED & CUSTOM FRAMES) */}
+            {/* 2. BỘ LỌC MÀU (REAL PORTRAIT PHOTO PREVIEWS) */}
             <section className="bg-white p-4 sm:p-5 rounded-3xl border border-pink-100 shadow-xs space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm sm:text-base font-black text-[#29252C] flex items-center gap-2">
                   <span className="w-6 h-6 rounded-lg bg-pink-100 text-[#FF3D96] flex items-center justify-center text-xs font-black">
                     2
                   </span>
-                  <span>Khung Hỗ Trợ Chụp & Thần Tượng</span>
-                </h3>
-                <button
-                  onClick={onOpenFrameModal}
-                  className="text-xs font-black text-[#FF3D96] hover:underline flex items-center gap-1 cursor-pointer"
-                >
-                  <span>Mở kho khung</span>
-                  <span>→</span>
-                </button>
-              </div>
-
-              {/* Active Frame Banner Card */}
-              <div className="bg-gradient-to-r from-pink-500/10 via-purple-500/10 to-pink-500/10 border-2 border-pink-200/80 rounded-2xl p-3.5 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div
-                    style={{
-                      background: selectedFrame?.bg || '#ffffff',
-                      borderColor: selectedFrame?.border || '#fbcfe8',
-                      color: selectedFrame?.text || '#29252c',
-                    }}
-                    className="w-10 h-16 rounded-xl border flex flex-col justify-between p-1 shadow-sm shrink-0 overflow-hidden relative"
-                  >
-                    {isCustomFrame ? (
-                      <img
-                        src={selectedFrame.imageUrl}
-                        alt={selectedFrame.name}
-                        className="w-full h-full object-contain"
-                      />
-                    ) : (
-                      <>
-                        <span className="text-[4px] font-black uppercase text-center truncate">
-                          {selectedFrame?.headerTitle || 'SNUGGIE'}
-                        </span>
-                        <div className="flex flex-col gap-0.5 justify-around flex-1 py-0.5">
-                          {[0, 1, 2, 3].map((n) => (
-                            <div key={n} className="w-full h-2 bg-black/10 rounded-xs" />
-                          ))}
-                        </div>
-                        <span className="text-[3px] text-center opacity-60">2026</span>
-                      </>
-                    )}
-                  </div>
-
-                  <div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[8px] font-black uppercase px-2 py-0.5 rounded-full bg-[#FF3D96] text-white">
-                        {selectedFrame?.badge || 'Đang Chọn'}
-                      </span>
-                      <h4 className="text-xs font-black text-[#29252C] truncate">
-                        {selectedFrame?.name || 'Mặc định (Clean Minimal)'}
-                      </h4>
-                    </div>
-                    <p className="text-[10px] text-[#766F7B] mt-0.5 max-w-sm">
-                      Khung viền sẽ tự động căn góc và hiển thị trực tiếp trên camera gương.
-                    </p>
-                  </div>
-                </div>
-
-                <button
-                  onClick={onOpenFrameModal}
-                  className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-[#FF3D96] to-[#FF6BA8] text-white font-black text-xs shadow-md shadow-pink-500/20 hover:scale-102 transition active:scale-95 flex items-center gap-1.5 cursor-pointer shrink-0"
-                >
-                  <ImageIcon size={14} />
-                  <span>Đổi Khung</span>
-                </button>
-              </div>
-
-              {/* Quick Choice Frame Chips */}
-              <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-                {quickPickFrames.map((f) => {
-                  const isSelected = selectedFrame?.id === f.id
-                  return (
-                    <button
-                      key={f.id}
-                      onClick={() => onSelectFrame && onSelectFrame(f)}
-                      className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap shrink-0 transition flex items-center gap-1.5 border cursor-pointer ${
-                        isSelected
-                          ? 'bg-[#FF3D96] text-white border-[#FF3D96] shadow-sm'
-                          : 'bg-white border-pink-200 text-[#29252C] hover:border-pink-300'
-                      }`}
-                    >
-                      <span>{f.decorations?.[0]?.emoji || '✨'}</span>
-                      <span>{f.name}</span>
-                    </button>
-                  )
-                })}
-              </div>
-            </section>
-
-            {/* 3. BỘ LỌC MÀU (FILTERS) */}
-            <section className="bg-white p-4 sm:p-5 rounded-3xl border border-pink-100 shadow-xs space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm sm:text-base font-black text-[#29252C] flex items-center gap-2">
-                  <span className="w-6 h-6 rounded-lg bg-pink-100 text-[#FF3D96] flex items-center justify-center text-xs font-black">
-                    3
-                  </span>
-                  <span>{t('filter_title')}</span>
+                  <span>Bộ Lọc Màu Yêu Thích (Signature Filters)</span>
                 </h3>
                 <span className="text-xs font-bold text-[#FF3D96]">
                   {t(selectedFilter?.nameKey) || selectedFilter?.name}
                 </span>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              {/* Photo Cards Grid for each filter */}
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-7 gap-2.5">
                 {FILTERS.map((f) => {
                   const isSelected = selectedFilter?.id === f.id
                   return (
                     <button
                       key={f.id}
                       onClick={() => setSelectedFilter(f)}
-                      className={`p-2.5 rounded-2xl border-2 text-center transition-all cursor-pointer flex flex-col items-center gap-1.5 ${
+                      className={`group p-1.5 rounded-2xl border-2 text-center transition-all cursor-pointer flex flex-col items-center gap-1.5 ${
                         isSelected
-                          ? 'border-[#FF3D96] bg-pink-50/50 shadow-md shadow-pink-500/10'
-                          : 'border-pink-100 bg-[#FFFDF9] hover:border-pink-200'
+                          ? 'border-[#FF3D96] bg-pink-50 shadow-md shadow-pink-500/10 ring-2 ring-pink-300'
+                          : 'border-pink-100 bg-[#FFFDF9] hover:border-pink-300'
                       }`}
                     >
-                      <div
-                        style={{ backgroundColor: `${f.color}25` }}
-                        className="w-10 h-10 rounded-xl flex items-center justify-center relative overflow-hidden"
-                      >
-                        <span className="text-lg">📸</span>
+                      {/* REAL PHOTO THUMBNAIL WITH DYNAMIC FILTER APPLIED */}
+                      <div className="w-full aspect-[4/5] rounded-xl overflow-hidden relative shadow-xs">
+                        <img
+                          src={SAMPLE_PORTRAITS[0]}
+                          alt={f.name}
+                          style={{ filter: f.css }}
+                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        />
                         {isSelected && (
-                          <div className="absolute inset-0 bg-[#FF3D96]/15 flex items-center justify-center">
-                            <CheckCircle size={15} className="text-[#FF3D96]" />
+                          <div className="absolute inset-0 bg-[#FF3D96]/15 border-2 border-[#FF3D96] rounded-xl flex items-center justify-center">
+                            <div className="w-5 h-5 rounded-full bg-[#FF3D96] text-white flex items-center justify-center shadow-md">
+                              <Check size={12} strokeWidth={3} />
+                            </div>
                           </div>
                         )}
                       </div>
-                      <div>
-                        <p className="font-black text-xs text-[#29252C]">
+
+                      <div className="w-full text-center">
+                        <p className="font-black text-[11px] text-[#29252C] truncate">
                           {t(f.nameKey) || f.name}
                         </p>
                         <span
                           style={{ color: f.color }}
-                          className="text-[8px] font-extrabold uppercase"
+                          className="text-[8px] font-extrabold uppercase block truncate"
                         >
                           {f.badge}
                         </span>
@@ -617,42 +536,175 @@ export default function StyleSelectScreen({
               </div>
             </section>
 
-            {/* 4. KHUNG CONCEPT & ĐẠO CỤ COLLAB */}
+            {/* 3. KHUNG HỖ TRỢ CHỤP (VISUAL THEMED STRIP CARDS & MOBILE UPLOAD) */}
+            <section className="bg-white p-4 sm:p-5 rounded-3xl border border-pink-100 shadow-xs space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm sm:text-base font-black text-[#29252C] flex items-center gap-2">
+                  <span className="w-6 h-6 rounded-lg bg-pink-100 text-[#FF3D96] flex items-center justify-center text-xs font-black">
+                    3
+                  </span>
+                  <span>Khung Hỗ Trợ Chụp & Thần Tượng (22+ Mẫu)</span>
+                </h3>
+                <button
+                  onClick={onOpenFrameModal}
+                  className="text-xs font-black text-[#FF3D96] hover:underline flex items-center gap-1 cursor-pointer"
+                >
+                  <span>Xem tất cả</span>
+                  <span>→</span>
+                </button>
+              </div>
+
+              {/* Visual Strip Cards Horizontal Slider */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {/* UPLOAD CUSTOM FRAME CARD */}
+                <div
+                  onClick={onOpenFrameModal}
+                  className="group relative border-2 border-dashed border-pink-300 hover:border-[#FF3D96] bg-pink-50/40 hover:bg-pink-50/80 rounded-2xl p-3 flex flex-col items-center justify-center text-center cursor-pointer transition active:scale-98 min-h-[160px]"
+                >
+                  <div className="w-10 h-10 rounded-2xl bg-white border border-pink-200 text-[#FF3D96] flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform mb-2">
+                    <Upload size={18} />
+                  </div>
+                  <h4 className="font-black text-xs text-[#29252C] group-hover:text-[#FF3D96]">
+                    Tải lên khung của bạn
+                  </h4>
+                  <p className="text-[9px] text-[#766F7B] mt-0.5 leading-tight">
+                    File PNG tách nền từ điện thoại
+                  </p>
+                  <span className="mt-2 text-[8px] font-black uppercase text-[#FF3D96] bg-pink-100 px-2 py-0.5 rounded-full">
+                    Từ Máy Bạn
+                  </span>
+                </div>
+
+                {/* TOP THEMED FRAMES WITH MINI PHOTOS */}
+                {topVisualFrames.slice(0, 3).map((frame) => {
+                  const isSelected = selectedFrame?.id === frame.id
+                  return (
+                    <div
+                      key={frame.id}
+                      onClick={() => onSelectFrame && onSelectFrame(frame)}
+                      className={`relative rounded-2xl p-2.5 flex flex-col items-center cursor-pointer transition active:scale-98 border-2 ${
+                        isSelected
+                          ? 'border-[#FF3D96] bg-pink-50/50 ring-2 ring-pink-300 shadow-md'
+                          : 'border-pink-100 bg-[#FFFDF9] hover:border-pink-300'
+                      }`}
+                    >
+                      {/* MINIATURE 1X4 STRIP WITH SAMPLES */}
+                      <div
+                        style={{
+                          background: frame.bg || '#ffffff',
+                          borderColor: frame.border || '#fbcfe8',
+                        }}
+                        className="w-16 h-28 rounded-xl border p-1 flex flex-col justify-between items-center shadow-xs overflow-hidden relative"
+                      >
+                        <span
+                          style={{ color: frame.text || '#29252c' }}
+                          className="text-[4px] font-black uppercase truncate text-center w-full"
+                        >
+                          {frame.headerTitle || frame.name}
+                        </span>
+
+                        <div className="w-full flex flex-col justify-between flex-1 py-0.5 gap-0.5">
+                          {SAMPLE_PORTRAITS.map((url, i) => (
+                            <div key={i} className="w-full h-4 rounded-xs overflow-hidden bg-black/10">
+                              <img src={url} alt={`Cutout ${i + 1}`} className="w-full h-full object-cover" />
+                            </div>
+                          ))}
+                        </div>
+
+                        <span
+                          style={{ color: frame.text || '#29252c' }}
+                          className="text-[3px] font-bold text-center opacity-70"
+                        >
+                          {frame.footerText || 'K-PHOTOBOOTH'}
+                        </span>
+                      </div>
+
+                      <div className="w-full text-center mt-1.5">
+                        <span className="text-[7px] font-black uppercase px-1.5 py-0.2 rounded-full bg-pink-100 text-[#FF3D96]">
+                          {frame.badge || 'HOT'}
+                        </span>
+                        <p className="font-black text-[11px] text-[#29252C] truncate mt-0.5">
+                          {frame.name}
+                        </p>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* View all frames button */}
+              <button
+                onClick={onOpenFrameModal}
+                className="w-full py-2.5 rounded-2xl bg-[#FFF7EF] hover:bg-pink-50 border border-pink-200 text-xs font-black text-[#FF3D96] flex items-center justify-center gap-1.5 transition cursor-pointer"
+              >
+                <ImageIcon size={15} />
+                <span>Mở toàn bộ kho khung (BTS, Born Pink, Sanrio, NewJeans, Y2K...)</span>
+              </button>
+            </section>
+
+            {/* 4. KHUNG CONCEPT & ĐẠO CỤ COLLAB (VISUAL PROPS CARDS) */}
             <section className="bg-white p-4 sm:p-5 rounded-3xl border border-pink-100 shadow-xs space-y-3">
               <h3 className="text-sm sm:text-base font-black text-[#29252C] flex items-center gap-2">
                 <span className="w-6 h-6 rounded-lg bg-pink-100 text-[#FF3D96] flex items-center justify-center text-xs font-black">
                   4
                 </span>
-                <span>{t('collab_title')}</span>
+                <span>Khung Concept & Đạo Cụ Chụp Chung</span>
               </h3>
 
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
                 {COLLAB_FRAMES.map((cf) => {
                   const isSelected = selectedCollabFrame?.id === cf.id
                   return (
                     <button
                       key={cf.id}
                       onClick={() => setSelectedCollabFrame(cf)}
-                      className={`p-2.5 rounded-2xl border-2 text-left transition cursor-pointer ${
+                      className={`p-2 rounded-2xl border-2 text-center transition cursor-pointer relative flex flex-col items-center gap-1.5 ${
                         isSelected
-                          ? 'border-[#FF3D96] bg-pink-50/50 shadow-md shadow-pink-500/10'
-                          : 'border-pink-100 bg-[#FFFDF9] hover:border-pink-200'
+                          ? 'border-[#FF3D96] bg-pink-50/50 shadow-md ring-2 ring-pink-300'
+                          : 'border-pink-100 bg-[#FFFDF9] hover:border-pink-300'
                       }`}
                     >
-                      <div className="flex items-center justify-between mb-0.5">
-                        <span className="text-xl">{cf.icon}</span>
-                        <span className="text-[7px] font-black px-1.5 py-0.2 rounded-full bg-pink-100 text-[#FF3D96]">
-                          {cf.badge}
-                        </span>
+                      {/* Visual Photo Card with Prop Overlay */}
+                      <div className="w-full aspect-square rounded-xl overflow-hidden relative shadow-xs bg-neutral-100">
+                        <img
+                          src={SAMPLE_PORTRAITS[1]}
+                          alt={cf.name}
+                          className="w-full h-full object-cover"
+                        />
+                        {/* Prop Mockup Overlay */}
+                        {cf.id === 'idol-half-heart' && (
+                          <div className="absolute inset-0 flex items-center justify-end pr-1 bg-black/20">
+                            <span className="text-2xl filter drop-shadow-md animate-pulse">🫶</span>
+                          </div>
+                        )}
+                        {cf.id === 'cat-ear-headband' && (
+                          <div className="absolute top-0.5 inset-x-0 flex justify-center bg-black/10">
+                            <span className="text-xl filter drop-shadow-md animate-bounce">🐱</span>
+                          </div>
+                        )}
+                        {cf.id === 'y2k-cyber-glitch' && (
+                          <div className="absolute inset-1 border border-cyan-400/80 rounded-sm flex items-center justify-center text-[7px] text-cyan-300 font-mono">
+                            <span>[HUD]</span>
+                          </div>
+                        )}
+                        {cf.id === 'film-slate' && (
+                          <div className="absolute top-0 inset-x-0 h-3 bg-black/80 flex items-center justify-center text-[6px] text-white font-mono">
+                            <span>SCENE 01</span>
+                          </div>
+                        )}
                       </div>
-                      <p className="font-black text-[11px] text-[#29252C] truncate">{cf.name}</p>
+
+                      <div className="w-full text-center">
+                        <p className="font-black text-[11px] text-[#29252C] truncate">{cf.name}</p>
+                        <span className="text-[8px] font-bold text-[#FF3D96]">{cf.badge}</span>
+                      </div>
                     </button>
                   )
                 })}
               </div>
             </section>
 
-            {/* 5. CÀI ĐẶT BỔ SUNG (COLLAPSIBLE) */}
+            {/* 5. MÀU KHUNG & TÙY CHỌN BỔ SUNG */}
             <section className="bg-white rounded-3xl border border-pink-100 p-4 shadow-xs">
               <button
                 onClick={() => setShowMoreOptions(!showMoreOptions)}
@@ -661,7 +713,7 @@ export default function StyleSelectScreen({
                 <div className="flex items-center gap-2">
                   <Sliders size={16} className="text-[#FF3D96]" />
                   <span className="font-black text-xs uppercase tracking-wider text-[#29252C]">
-                    Màu Khung Nền & Hẹn Giờ Chụp
+                    Màu Khung Ảnh Trơn & Hẹn Giờ Chụp
                   </span>
                 </div>
                 {showMoreOptions ? (
@@ -673,23 +725,31 @@ export default function StyleSelectScreen({
 
               {showMoreOptions && (
                 <div className="mt-4 pt-4 border-t border-pink-100 space-y-4 animate-fade-in">
-                  {/* Frame Color Swatches */}
+                  {/* Visual Strip Colors */}
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-[#766F7B]">Màu khung mặc định:</label>
-                    <div className="flex flex-wrap gap-2">
+                    <label className="text-xs font-bold text-[#766F7B]">Màu viền dải ảnh:</label>
+                    <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
                       {FRAME_COLORS.map((c) => {
                         const isSelected = frameColor?.id === c.id
                         return (
                           <button
                             key={c.id}
                             onClick={() => setFrameColor(c)}
-                            style={{ backgroundColor: c.bg, borderColor: c.border }}
-                            className={`w-7 h-7 rounded-full border-2 transition active:scale-95 cursor-pointer flex items-center justify-center text-[10px] ${
-                              isSelected ? 'ring-2 ring-[#FF3D96] ring-offset-1 font-bold' : ''
+                            className={`p-2 rounded-xl border text-center flex flex-col items-center gap-1 transition cursor-pointer ${
+                              isSelected
+                                ? 'border-[#FF3D96] bg-pink-50 ring-2 ring-[#FF3D96]/30'
+                                : 'border-pink-100 bg-white hover:border-pink-200'
                             }`}
-                            title={t(c.nameKey) || c.name}
                           >
-                            {isSelected && '✓'}
+                            <span
+                              style={{ backgroundColor: c.bg, borderColor: c.border }}
+                              className="w-6 h-6 rounded-full border-2 shadow-xs shrink-0 flex items-center justify-center text-[10px]"
+                            >
+                              {isSelected && '✓'}
+                            </span>
+                            <span className="text-[9px] font-bold text-[#29252C] truncate w-full">
+                              {t(c.nameKey) || c.name}
+                            </span>
                           </button>
                         )
                       })}
