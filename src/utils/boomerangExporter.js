@@ -6,6 +6,43 @@ export const isWebCodecsSupported = () => {
 }
 
 /**
+ * Determine the optimal H.264 AVC codec configuration supported by this device.
+ * AVC Level 4.0 (0x28) or higher supports 1080p resolutions, solving the Level 3.0 (0x1E) limit.
+ */
+async function getSupportedH264Codec(width, height, bitrate) {
+  const candidateCodecs = [
+    'avc1.420028', // Baseline Profile Level 4.0 (supports up to 2,097,152 pixels)
+    'avc1.420029', // Baseline Profile Level 4.1
+    'avc1.4d002a', // Main Profile Level 4.2
+    'avc1.640028', // High Profile Level 4.0
+    'avc1.64002a', // High Profile Level 4.2
+    'avc1.420033', // Baseline Profile Level 5.1 (supports 4K)
+    'avc1.42001f', // Baseline Profile Level 3.1
+  ]
+
+  if (typeof VideoEncoder !== 'undefined' && typeof VideoEncoder.isConfigSupported === 'function') {
+    for (const codec of candidateCodecs) {
+      try {
+        const support = await VideoEncoder.isConfigSupported({
+          codec,
+          width,
+          height,
+          bitrate,
+        })
+        if (support && support.supported) {
+          return codec
+        }
+      } catch {
+        // Continue checking other candidates
+      }
+    }
+  }
+
+  // Fallback to widely compatible Baseline Level 4.0
+  return 'avc1.420028'
+}
+
+/**
  * Renders an animated Boomerang 4-Cut video strip (MP4) using WebCodecs & mp4-muxer.
  * Runs 100% on GPU/Hardware encoder with zero server latency.
  */
@@ -13,7 +50,7 @@ export async function exportBoomerangMp4({
   videoClips = [], // Array of Array of ImageBitmaps (e.g. 4 shots x 60 frames)
   layout = 'strip-4',
   frameColor = { bg: '#ffffff', text: '#1e293b' },
-  customText = 'K-PHOTOBOOTH',
+  customText = 'SNUGGIE PHOTOBOOTH',
   stickers = [],
   doodleStrokes = [],
   filterCss = 'none',
@@ -21,25 +58,28 @@ export async function exportBoomerangMp4({
   onProgress,
 }) {
   if (!isWebCodecsSupported()) {
-    throw new Error('WebCodecs VideoEncoder is not supported in this browser.')
+    throw new Error('Trình duyệt không hỗ trợ WebCodecs VideoEncoder.')
   }
 
   if (!videoClips || videoClips.length === 0) {
-    throw new Error('No video frames recorded for Boomerang.')
+    throw new Error('Chưa có dữ liệu khung hình camera để tạo video Boomerang.')
   }
 
   const isGrid = layout === 'grid-4'
   const isDuo = layout === 'strip-2'
 
-  // Dimensions must be even numbers for H.264 video encoding
-  const videoWidth = isGrid ? 760 : 520
-  const videoHeight = isGrid ? 1040 : isDuo ? 760 : 1520
-  const scale = 2 // 2x scale for crisp 720p/1080p mobile video
+  // Dimensions aligned to multiples of 16 for optimal H.264 hardware encoding
+  const videoWidth = isGrid ? 768 : 528
+  const videoHeight = isGrid ? 1040 : isDuo ? 768 : 1536
 
   const canvas = document.createElement('canvas')
   canvas.width = videoWidth
   canvas.height = videoHeight
   const ctx = canvas.getContext('2d', { willReadFrequently: false })
+
+  // Find supported H.264 codec string (Level 4.0+ for 1080p support)
+  const bitrate = 2_500_000 // 2.5 Mbps crisp video
+  const chosenCodec = await getSupportedH264Codec(videoWidth, videoHeight, bitrate)
 
   // Initialize mp4-muxer
   const muxer = new Muxer({
@@ -62,24 +102,23 @@ export async function exportBoomerangMp4({
     },
   })
 
-  // Configure H.264 Baseline Profile (avc1.42001E)
+  // Configure VideoEncoder with chosen Level 4.0+ codec
   videoEncoder.configure({
-    codec: 'avc1.42001E',
+    codec: chosenCodec,
     width: videoWidth,
     height: videoHeight,
-    bitrate: 2_500_000, // 2.5 Mbps crisp video
+    bitrate,
   })
 
   const fps = 24
   const totalDurationSeconds = 4 // 4-second boomerang loop
   const totalFrames = fps * totalDurationSeconds // 96 frames
-  const maxRecorded = Math.max(...videoClips.map((c) => c?.length || 1), 60)
 
   // Layout slots
-  const photoWidth = (isGrid ? 330 : 448)
-  const photoHeight = (isGrid ? 330 : 284)
+  const photoWidth = isGrid ? 336 : 456
+  const photoHeight = isGrid ? 336 : 288
   const paddingX = 36
-  const startY = 84
+  const startY = 88
   const gap = 24
 
   // Map loop index k (0..95) to ping-pong boomerang frame index
@@ -110,7 +149,7 @@ export async function exportBoomerangMp4({
     year: 'numeric',
   })
 
-  // Encode 96 frames
+  // Encode 96 frames in a ping-pong loop
   for (let k = 0; k < totalFrames; k++) {
     if (encodeError) throw encodeError
 
@@ -195,8 +234,9 @@ export async function exportBoomerangMp4({
       await new Promise((resolve) => setTimeout(resolve, 8))
     }
 
+    // Report normalized progress 0.0 to 1.0
     if (onProgress) {
-      onProgress(Math.round(((k + 1) / totalFrames) * 100))
+      onProgress((k + 1) / totalFrames)
     }
   }
 
