@@ -31,23 +31,39 @@ export default function CameraView({
   retakeIndex = 0,
   selectedFrame,
   onOpenFrameModal,
+  facingMode: propFacingMode,
+  setFacingMode: propSetFacingMode,
+  beautyLevel: propBeautyLevel,
+  setBeautyLevel: propSetBeautyLevel,
+  isUltraWide: propIsUltraWide,
+  setIsUltraWide: propSetIsUltraWide,
 }) {
   const { t } = useLanguage()
   const videoRef = useRef(null)
   const ringBufferRef = useRef(new ShotRingBuffer(60))
   const [stream, setStream] = useState(null)
-  const [facingMode, setFacingMode] = useState('user')
+
+  const [localFacingMode, setLocalFacingMode] = useState('user')
+  const facingMode = propFacingMode !== undefined ? propFacingMode : localFacingMode
+  const setFacingMode = propSetFacingMode || setLocalFacingMode
+
+  const [localBeautyLevel, setLocalBeautyLevel] = useState(1)
+  const beautyLevel = propBeautyLevel !== undefined ? propBeautyLevel : localBeautyLevel
+  const setBeautyLevel = propSetBeautyLevel || setLocalBeautyLevel
+
+  const [localIsUltraWide, setLocalIsUltraWide] = useState(false)
+  const isUltraWide = propIsUltraWide !== undefined ? propIsUltraWide : localIsUltraWide
+  const setIsUltraWide = propSetIsUltraWide || setLocalIsUltraWide
+
   const [isCountingDown, setIsCountingDown] = useState(false)
   const [countdown, setCountdown] = useState(countdownDuration)
   const [isFlashing, setIsFlashing] = useState(false)
   const [hasPermission, setHasPermission] = useState(null)
   const [soundEnabled, setSoundEnabled] = useState(true)
-  const [isUltraWide, setIsUltraWide] = useState(false)
 
   // AI Features State
   const [gestureEnabled, setGestureEnabled] = useState(false)
   const [gestureToast, setGestureToast] = useState(null)
-  const [beautyLevel, setBeautyLevel] = useState(1) // 1 = Natural Bojeong by default
 
   // Frame Guide overlay toggle
   const [showFrameGuide, setShowFrameGuide] = useState(true)

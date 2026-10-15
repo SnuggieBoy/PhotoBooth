@@ -43,6 +43,11 @@ export default function App() {
   const [customFrames, setCustomFrames] = useState(() => loadSavedCustomFrames())
   const [isFrameModalOpen, setIsFrameModalOpen] = useState(false)
 
+  // Shared Live Camera Settings (Synchronized between Style Preview Mirror and Capture View)
+  const [facingMode, setFacingMode] = useState('user')
+  const [beautyLevel, setBeautyLevel] = useState(1) // 1 = Natural Bojeong
+  const [isUltraWide, setIsUltraWide] = useState(false)
+
   // Captured Photos & Boomerang Video Buffers
   const [photos, setPhotos] = useState([])
   const [videoClips, setVideoClips] = useState([])
@@ -689,6 +694,12 @@ export default function App() {
           selectedFrame={selectedFrame}
           onSelectFrame={setSelectedFrame}
           onOpenFrameModal={() => setIsFrameModalOpen(true)}
+          facingMode={facingMode}
+          setFacingMode={setFacingMode}
+          beautyLevel={beautyLevel}
+          setBeautyLevel={setBeautyLevel}
+          isUltraWide={isUltraWide}
+          setIsUltraWide={setIsUltraWide}
           onBack={() => setStep('welcome')}
           onContinue={handleStartCapture}
         />
@@ -736,6 +747,12 @@ export default function App() {
               retakeIndex={retakeTargetIndex || 0}
               selectedFrame={selectedFrame}
               onOpenFrameModal={() => setIsFrameModalOpen(true)}
+              facingMode={facingMode}
+              setFacingMode={setFacingMode}
+              beautyLevel={beautyLevel}
+              setBeautyLevel={setBeautyLevel}
+              isUltraWide={isUltraWide}
+              setIsUltraWide={setIsUltraWide}
             />
 
             {/* Thumbnails of captured shots */}
