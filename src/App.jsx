@@ -6,7 +6,6 @@ import {
   Palette,
   Smile,
   RefreshCw,
-  Download,
   Share2,
   ChevronRight,
   ArrowLeft,
@@ -16,8 +15,11 @@ import CameraView from './components/CameraView'
 import PhotoStripPreview from './components/PhotoStripPreview'
 import ShareModal from './components/ShareModal'
 import { FILTERS, FRAME_COLORS, STICKERS } from './utils/filters'
+import { useLanguage, LanguageSelector } from './i18n/LanguageContext'
 
 export default function App() {
+  const { t, language } = useLanguage()
+
   // Navigation Steps: 'setup' -> 'capturing' -> 'editing'
   const [step, setStep] = useState('setup')
 
@@ -65,7 +67,7 @@ export default function App() {
 
   // Reset to start
   const handleRetake = () => {
-    if (window.confirm('Bạn có muốn chụp lại từ đầu không?')) {
+    if (window.confirm(t('btn_retake_confirm'))) {
       startSession()
     }
   }
@@ -141,7 +143,6 @@ export default function App() {
       }
 
       ctx.save()
-      // Optional rounded corners
       ctx.drawImage(img, x, y, photoWidth, photoHeight)
       ctx.restore()
     })
@@ -161,8 +162,10 @@ export default function App() {
     ctx.font = `700 ${9 * scale}px sans-serif`
     ctx.textAlign = 'left'
     ctx.fillStyle = frameColor.text
+
+    const locale = language === 'vi' ? 'vi-VN' : language === 'ko' ? 'ko-KR' : language === 'ja' ? 'ja-JP' : 'en-US'
     ctx.fillText(
-      new Date().toLocaleDateString('vi-VN', {
+      new Date().toLocaleDateString(locale, {
         day: '2-digit',
         month: '2-digit',
         year: 'numeric',
@@ -173,7 +176,7 @@ export default function App() {
 
     ctx.font = `600 ${7 * scale}px monospace`
     ctx.globalAlpha = 0.6
-    ctx.fillText('SEOUL • TOKYO • SAIGON', paddingX, footerY + 8 * scale)
+    ctx.fillText(t('strip_city_slogan'), paddingX, footerY + 8 * scale)
     ctx.globalAlpha = 1.0
 
     // Trigger Browser Download
@@ -189,56 +192,70 @@ export default function App() {
     window.print()
   }
 
+  // Layout list with translation
+  const layoutOptions = [
+    { id: 'strip-4', label: t('layout_strip4'), sub: t('layout_strip4_sub'), count: 4 },
+    { id: 'grid-4', label: t('layout_grid4'), sub: t('layout_grid4_sub'), count: 4 },
+    { id: 'strip-2', label: t('layout_strip2'), sub: t('layout_strip2_sub'), count: 2 },
+  ]
+
   return (
     <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col">
       {/* Top Header Navbar */}
       <header className="sticky top-0 z-40 bg-neutral-950/80 backdrop-blur-md border-b border-neutral-800/80 px-4 py-3 sm:px-8">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
+        <div className="max-w-6xl mx-auto flex items-center justify-between gap-2">
+          {/* Brand */}
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-pink-500 to-rose-400 flex items-center justify-center shadow-lg shadow-pink-500/25">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-pink-500 to-rose-400 flex items-center justify-center shadow-lg shadow-pink-500/25 shrink-0">
               <Sparkles size={18} className="text-white" />
             </div>
             <div>
               <h1 className="font-black text-base sm:text-lg tracking-tight bg-gradient-to-r from-pink-400 via-rose-300 to-amber-200 bg-clip-text text-transparent">
-                K-PHOTOBOOTH
+                {t('app_title')}
               </h1>
               <p className="text-[10px] text-neutral-400 font-semibold uppercase tracking-widest hidden sm:block">
-                Web & Mobile Experience
+                {t('app_subtitle')}
               </p>
             </div>
           </div>
 
-          {/* Stepper Indicator */}
-          <div className="flex items-center gap-2 text-xs font-bold text-neutral-400">
-            <span
-              className={`px-3 py-1 rounded-full ${
-                step === 'setup'
-                  ? 'bg-pink-500 text-white shadow-sm shadow-pink-500/50'
-                  : 'bg-neutral-900 border border-neutral-800'
-              }`}
-            >
-              1. Cài Đặt
-            </span>
-            <ChevronRight size={14} />
-            <span
-              className={`px-3 py-1 rounded-full ${
-                step === 'capturing'
-                  ? 'bg-pink-500 text-white shadow-sm shadow-pink-500/50'
-                  : 'bg-neutral-900 border border-neutral-800'
-              }`}
-            >
-              2. Chụp Ảnh
-            </span>
-            <ChevronRight size={14} />
-            <span
-              className={`px-3 py-1 rounded-full ${
-                step === 'editing'
-                  ? 'bg-pink-500 text-white shadow-sm shadow-pink-500/50'
-                  : 'bg-neutral-900 border border-neutral-800'
-              }`}
-            >
-              3. Trang Trí & Lưu
-            </span>
+          {/* Right Header: Stepper + Language Selector */}
+          <div className="flex items-center gap-3">
+            {/* Stepper Indicator */}
+            <div className="hidden sm:flex items-center gap-1.5 text-xs font-bold text-neutral-400">
+              <span
+                className={`px-3 py-1 rounded-full ${
+                  step === 'setup'
+                    ? 'bg-pink-500 text-white shadow-sm shadow-pink-500/50'
+                    : 'bg-neutral-900 border border-neutral-800'
+                }`}
+              >
+                {t('step_setup')}
+              </span>
+              <ChevronRight size={13} />
+              <span
+                className={`px-3 py-1 rounded-full ${
+                  step === 'capturing'
+                    ? 'bg-pink-500 text-white shadow-sm shadow-pink-500/50'
+                    : 'bg-neutral-900 border border-neutral-800'
+                }`}
+              >
+                {t('step_capture')}
+              </span>
+              <ChevronRight size={13} />
+              <span
+                className={`px-3 py-1 rounded-full ${
+                  step === 'editing'
+                    ? 'bg-pink-500 text-white shadow-sm shadow-pink-500/50'
+                    : 'bg-neutral-900 border border-neutral-800'
+                }`}
+              >
+                {t('step_edit')}
+              </span>
+            </div>
+
+            {/* Language Selector Dropdown */}
+            <LanguageSelector />
           </div>
         </div>
       </header>
@@ -250,27 +267,23 @@ export default function App() {
           <div className="max-w-3xl mx-auto w-full space-y-8 py-6">
             <div className="text-center space-y-2">
               <span className="text-xs font-extrabold uppercase tracking-widest text-pink-400 px-3 py-1 rounded-full bg-pink-500/10 border border-pink-500/20">
-                Studio Trực Tuyến Thế Hệ Mới
+                {t('setup_badge')}
               </span>
               <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-white">
-                Tạo Dải Ảnh 4-Cut Đậm Chất Hàn Quốc
+                {t('setup_title')}
               </h2>
               <p className="text-sm text-neutral-400 max-w-lg mx-auto">
-                Chụp ảnh cùng bạn bè ngay trên trình duyệt điện thoại hoặc máy tính với bộ lọc màu Haru Film, Sticker Y2K và in ảnh tức thì.
+                {t('setup_desc')}
               </p>
             </div>
 
             {/* Layout Choices */}
             <div className="space-y-3">
               <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-400 flex items-center gap-1.5">
-                <LayoutGrid size={15} /> Chọn Kiểu Khung Ảnh
+                <LayoutGrid size={15} /> {t('layout_title')}
               </h3>
-              <div className="grid grid-cols-3 gap-3">
-                {[
-                  { id: 'strip-4', label: '4-Cut Dọc', sub: '1x4 Classic Life4Cuts', count: 4 },
-                  { id: 'grid-4', label: '4-Cut Ô Vuông', sub: '2x2 Photoism Style', count: 4 },
-                  { id: 'strip-2', label: '2-Cut Polaroid', sub: 'Duo Moments', count: 2 },
-                ].map((item) => (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {layoutOptions.map((item) => (
                   <button
                     key={item.id}
                     onClick={() => setLayout(item.id)}
@@ -295,7 +308,7 @@ export default function App() {
             {/* Filter Choices */}
             <div className="space-y-3">
               <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-400 flex items-center gap-1.5">
-                <Palette size={15} /> Bộ Lọc Màu Yêu Thích
+                <Palette size={15} /> {t('filter_title')}
               </h3>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {FILTERS.map((f) => (
@@ -309,8 +322,8 @@ export default function App() {
                     }`}
                   >
                     <div>
-                      <p className="font-bold text-xs text-white">{f.name}</p>
-                      <p className="text-[10px] text-neutral-400">{f.enName}</p>
+                      <p className="font-bold text-xs text-white">{t(f.nameKey) || f.name}</p>
+                      <p className="text-[10px] text-neutral-400">{t(f.subKey) || f.enName}</p>
                     </div>
                     <span
                       style={{ backgroundColor: `${f.color}20`, color: f.color }}
@@ -326,7 +339,7 @@ export default function App() {
             {/* Countdown Duration */}
             <div className="space-y-3">
               <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-400 flex items-center gap-1.5">
-                ⏱️ Thời Gian Đếm Ngược Giữa Mỗi Lần Chụp
+                ⏱️ {t('countdown_title')}
               </h3>
               <div className="flex gap-3">
                 {[3, 5, 8].map((sec) => (
@@ -339,7 +352,7 @@ export default function App() {
                         : 'border-neutral-800 bg-neutral-900 text-neutral-300 hover:border-neutral-700'
                     }`}
                   >
-                    {sec} Giây
+                    {sec} {t('seconds_unit')}
                   </button>
                 ))}
               </div>
@@ -351,7 +364,7 @@ export default function App() {
                 onClick={startSession}
                 className="w-full sm:w-auto px-10 py-4 rounded-full bg-gradient-to-r from-pink-500 via-rose-500 to-amber-400 hover:from-pink-600 hover:to-rose-600 text-white font-black text-base shadow-xl shadow-pink-500/25 transition active:scale-95 flex items-center justify-center gap-2 mx-auto"
               >
-                <Camera size={20} /> Bắt Đầu Chụp ({targetShotsCount} Poses)
+                <Camera size={20} /> {t('start_capture_btn')} ({targetShotsCount} {t('poses_label')})
               </button>
             </div>
           </div>
@@ -365,10 +378,10 @@ export default function App() {
                 onClick={() => setStep('setup')}
                 className="text-xs font-bold text-neutral-400 hover:text-white flex items-center gap-1"
               >
-                <ArrowLeft size={14} /> Chọn lại kiểu khung
+                <ArrowLeft size={14} /> {t('reselect_layout')}
               </button>
               <span className="text-xs font-bold text-pink-400">
-                Filter: {selectedFilter.name}
+                {t('active_filter')}: {t(selectedFilter.nameKey) || selectedFilter.name}
               </span>
             </div>
 
@@ -425,22 +438,22 @@ export default function App() {
             {/* Right: Customization Controls */}
             <div className="md:col-span-7 space-y-6 bg-neutral-900/60 border border-neutral-800 rounded-3xl p-6 backdrop-blur-md">
               <div>
-                <h3 className="text-lg font-black text-white">Tùy Chỉnh Dải Ảnh Của Bạn</h3>
+                <h3 className="text-lg font-black text-white">{t('edit_title')}</h3>
                 <p className="text-xs text-neutral-400">
-                  Chọn màu viền, gắn sticker ngộ nghĩnh và ghi tiêu đề kỷ niệm.
+                  {t('edit_desc')}
                 </p>
               </div>
 
               {/* Title Input */}
               <div className="space-y-2">
                 <label className="text-xs font-bold uppercase tracking-wider text-neutral-400">
-                  Tiêu Đề Dải Ảnh:
+                  {t('strip_title_label')}
                 </label>
                 <input
                   type="text"
                   value={customText}
                   onChange={(e) => setCustomText(e.target.value)}
-                  placeholder="VD: K-PHOTOBOOTH, HARU 2026..."
+                  placeholder={t('strip_title_placeholder')}
                   className="w-full px-4 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 focus:outline-none focus:border-pink-500 text-sm font-bold text-white uppercase tracking-wider"
                 />
               </div>
@@ -448,9 +461,9 @@ export default function App() {
               {/* Frame Color Picker */}
               <div className="space-y-2.5">
                 <label className="text-xs font-bold uppercase tracking-wider text-neutral-400">
-                  Màu Khung Ảnh:
+                  {t('frame_color_label')}
                 </label>
-                <div className="grid grid-cols-4 sm:grid-cols-4 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {FRAME_COLORS.map((c) => (
                     <button
                       key={c.id}
@@ -466,7 +479,7 @@ export default function App() {
                         className="w-5 h-5 rounded-full border border-black/20 shrink-0"
                       />
                       <span className="text-[11px] font-bold text-neutral-200 truncate">
-                        {c.name}
+                        {t(c.nameKey) || c.name}
                       </span>
                     </button>
                   ))}
@@ -476,7 +489,7 @@ export default function App() {
               {/* Sticker Selector */}
               <div className="space-y-2.5">
                 <label className="text-xs font-bold uppercase tracking-wider text-neutral-400 flex items-center gap-1.5">
-                  <Smile size={14} /> Nhấn Sticker Để Thêm Vào Ảnh:
+                  <Smile size={14} /> {t('sticker_label')}
                 </label>
                 <div className="flex flex-wrap gap-2">
                   {STICKERS.map((stk, i) => (
@@ -497,14 +510,14 @@ export default function App() {
                   onClick={handleRetake}
                   className="py-3 px-5 rounded-2xl bg-neutral-800 hover:bg-neutral-700 font-bold text-xs text-neutral-300 flex items-center gap-2 transition"
                 >
-                  <RefreshCw size={15} /> Chụp Lại
+                  <RefreshCw size={15} /> {t('btn_retake')}
                 </button>
 
                 <button
                   onClick={() => setIsShareModalOpen(true)}
                   className="flex-1 py-3 px-6 rounded-2xl bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 font-bold text-sm text-white flex items-center justify-center gap-2 shadow-lg shadow-pink-500/25 transition active:scale-98"
                 >
-                  <Share2 size={16} /> Xuất Ảnh & Quét QR
+                  <Share2 size={16} /> {t('btn_export')}
                 </button>
               </div>
             </div>

@@ -1,16 +1,24 @@
-import { useRef, useEffect } from 'react'
+import { useRef } from 'react'
 import { Sparkles, X } from 'lucide-react'
+import { useLanguage } from '../i18n/LanguageContext'
 
 export default function PhotoStripPreview({
   photos = [],
   layout = 'strip-4', // 'strip-4' (1x4) | 'grid-4' (2x2) | 'strip-2' (1x2)
   frameColor = { id: 'white', bg: '#ffffff', text: '#1e293b', border: '#e2e8f0' },
   customText = 'K-PHOTOBOOTH',
-  subtitle = new Date().toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+  subtitle,
   stickers = [],
   onRemoveSticker,
   stripRef,
 }) {
+  const { t, language } = useLanguage()
+
+  const formattedDate = subtitle || new Date().toLocaleDateString(
+    language === 'vi' ? 'vi-VN' : language === 'ko' ? 'ko-KR' : language === 'ja' ? 'ja-JP' : 'en-US',
+    { day: '2-digit', month: '2-digit', year: 'numeric' }
+  )
+
   return (
     <div className="flex flex-col items-center">
       {/* Outer Strip Shadow Container */}
@@ -76,7 +84,7 @@ export default function PhotoStripPreview({
             style={{ left: `${stk.x}%`, top: `${stk.y}%` }}
             className="absolute -translate-x-1/2 -translate-y-1/2 text-2xl select-none cursor-pointer group hover:scale-125 transition-transform"
             onClick={() => onRemoveSticker && onRemoveSticker(stk.id)}
-            title="Nhấn để xóa sticker"
+            title={t('sticker_remove_hint')}
           >
             {stk.emoji}
             <span className="hidden group-hover:block absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 text-[8px]">
@@ -85,12 +93,12 @@ export default function PhotoStripPreview({
           </div>
         ))}
 
-        {/* Bottom Authentic K-Photobooth Footer (Date + Barcode + QR preview) */}
+        {/* Bottom Authentic K-Photobooth Footer (Date + Barcode + Slogan) */}
         <div className="w-full mt-4 pt-2.5 border-t border-black/10 flex items-end justify-between text-[10px]">
           <div>
-            <p className="font-extrabold tracking-wider">{subtitle}</p>
+            <p className="font-extrabold tracking-wider">{formattedDate}</p>
             <p className="opacity-60 text-[8px] uppercase tracking-widest font-mono">
-              SEOUL • TOKYO • SAIGON
+              {t('strip_city_slogan')}
             </p>
           </div>
 

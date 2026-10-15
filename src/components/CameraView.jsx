@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Camera, SwitchCamera, Sparkles, Volume2, VolumeX } from 'lucide-react'
 import { soundFX } from '../utils/audio'
+import { useLanguage } from '../i18n/LanguageContext'
 
 export default function CameraView({
   onPhotoTaken,
@@ -9,6 +10,7 @@ export default function CameraView({
   filterCss = 'none',
   countdownDuration = 3,
 }) {
+  const { t } = useLanguage()
   const videoRef = useRef(null)
   const [stream, setStream] = useState(null)
   const [facingMode, setFacingMode] = useState('user')
@@ -125,15 +127,15 @@ export default function CameraView({
       {hasPermission === false ? (
         <div className="p-8 text-center max-w-md">
           <Camera className="w-16 h-16 mx-auto mb-4 text-pink-500 opacity-60" />
-          <h3 className="font-bold text-lg mb-2">Chưa cấp quyền Camera</h3>
+          <h3 className="font-bold text-lg mb-2">{t('camera_no_permission')}</h3>
           <p className="text-sm text-neutral-400 mb-4">
-            Vui lòng cho phép trình duyệt truy cập camera để bắt đầu trải nghiệm Photobooth.
+            {t('camera_no_permission_desc')}
           </p>
           <button
             onClick={() => setFacingMode(f => (f === 'user' ? 'environment' : 'user'))}
             className="px-5 py-2.5 rounded-full bg-pink-500 hover:bg-pink-600 font-bold text-sm transition"
           >
-            Thử Lại
+            {t('camera_retry')}
           </button>
         </div>
       ) : (
@@ -157,7 +159,7 @@ export default function CameraView({
               {countdown > 0 ? countdown : '📸'}
             </span>
             <p className="text-white text-lg font-bold tracking-wider mt-4 uppercase">
-              {countdown > 0 ? 'Chuẩn bị tạo dáng...' : 'Cười lên nào! ✨'}
+              {countdown > 0 ? t('countdown_prep') : t('countdown_smile')}
             </p>
           </div>
         </div>
@@ -169,7 +171,7 @@ export default function CameraView({
         <div className="bg-black/60 backdrop-blur-md border border-white/10 px-4 py-1.5 rounded-full flex items-center gap-2">
           <span className="w-2.5 h-2.5 rounded-full bg-pink-500 animate-pulse" />
           <span className="text-xs font-bold text-white tracking-wide">
-            ẢNH {currentShotIndex + 1} / {shotsCount}
+            {t('shot_indicator')} {currentShotIndex + 1} / {shotsCount}
           </span>
         </div>
 
@@ -178,14 +180,14 @@ export default function CameraView({
           <button
             onClick={() => setSoundEnabled(!soundEnabled)}
             className="w-10 h-10 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-white flex items-center justify-center hover:bg-black/80 transition active:scale-95"
-            title={soundEnabled ? 'Tắt âm thanh' : 'Bật âm thanh'}
+            title={soundEnabled ? t('sound_mute') : t('sound_unmute')}
           >
             {soundEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
           </button>
           <button
             onClick={toggleFacingMode}
             className="w-10 h-10 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-white flex items-center justify-center hover:bg-black/80 transition active:scale-95"
-            title="Đổi camera trước/sau"
+            title={t('flip_camera')}
           >
             <SwitchCamera size={18} />
           </button>
