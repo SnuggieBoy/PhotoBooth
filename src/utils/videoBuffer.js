@@ -23,12 +23,28 @@ export class ShotRingBuffer {
     return [...this.frames]
   }
 
+  toArray() {
+    return [...this.frames]
+  }
+
+  extractAndReset() {
+    const extracted = [...this.frames]
+    this.frames = []
+    return extracted
+  }
+
   clear() {
     this.frames.forEach((f) => {
       if (f && typeof f.close === 'function') {
-        f.close()
+        try {
+          f.close()
+        } catch {}
       }
     })
     this.frames = []
+  }
+
+  dispose() {
+    this.clear()
   }
 }

@@ -145,6 +145,32 @@ export default function CameraView({
     }
   }, [shootingState])
 
+  // Timers & Synchronous Props Refs to guarantee no stale closures or hung promises
+  const countdownTimerRef = useRef(null)
+  const breakTimerRef = useRef(null)
+  const isAutoSequenceRef = useRef(isAutoSequence)
+  isAutoSequenceRef.current = isAutoSequence
+  const currentShotIndexRef = useRef(currentShotIndex)
+  currentShotIndexRef.current = currentShotIndex
+  const shotsCountRef = useRef(shotsCount)
+  shotsCountRef.current = shotsCount
+  const facingModeRef = useRef(facingMode)
+  facingModeRef.current = facingMode
+  const countdownDurationRef = useRef(countdownDuration)
+  countdownDurationRef.current = countdownDuration
+  const isRetakingSingleShotRef = useRef(isRetakingSingleShot)
+  isRetakingSingleShotRef.current = isRetakingSingleShot
+  const soundEnabledRef = useRef(soundEnabled)
+  soundEnabledRef.current = soundEnabled
+
+  // Cleanup all timers on unmount
+  useEffect(() => {
+    return () => {
+      if (countdownTimerRef.current) clearInterval(countdownTimerRef.current)
+      if (breakTimerRef.current) clearInterval(breakTimerRef.current)
+    }
+  }, [])
+
   // MediaPipe Gesture Recognition loop (Runs decoupled at ~8 Hz)
   useEffect(() => {
     let gestureInterval = null
@@ -174,48 +200,71 @@ export default function CameraView({
     }
   }, [gestureEnabled, shootingState])
 
-  // AUTO SEQUENCE CONTROLLER:
-  // When currentShotIndex changes and auto-sequence is active, trigger 2s pose change break, then next shot
-  useEffect(() => {
-    if (!isAutoSequence || isRetakingSingleShot) return
-    if (currentShotIndex === 0) return // First shot is triggered by user click/gesture
-    if (currentShotIndex >= shotsCount) return // All shots done
+  // Start 2s Pose Break between shots in Auto Sequence mode
+  const startPoseBreak = () => {
+    if (breakTimerRef.current) clearInterval(breakTimerRef.current)
+    if (countdownTimerRef.current) clearInterval(countdownTimerRef.current)
 
-    // We just took a shot, now in pose transition break for the next pose!
     setShootingState('pose_transition')
     setPoseBreakCountdown(2)
-
     let breakTimer = 2
-    const breakInterval = setInterval(() => {
+
+    breakTimerRef.current = setInterval(() => {
       breakTimer -= 1
       if (breakTimer > 0) {
         setPoseBreakCountdown(breakTimer)
       } else {
-        clearInterval(breakInterval)
+        clearInterval(breakTimerRef.current)
+        breakTimerRef.current = null
         startCountdownSequence()
       }
     }, 1000)
+  }
 
-    return () => clearInterval(breakInterval)
-  }, [currentShotIndex, isAutoSequence, shotsCount, isRetakingSingleShot])
+  // Skip break timer and shoot next pose immediately
+  const handleSkipBreakAndShoot = () => {
+    if (breakTimerRef.current) clearInterval(breakTimerRef.current)
+    breakTimerRef.current = null
+    startCountdownSequence()
+  }
+
+  // Cancel/stop shooting sequence
+  const handleCancelSequence = () => {
+    if (breakTimerRef.current) clearInterval(breakTimerRef.current)
+    breakTimerRef.current = null
+    if (countdownTimerRef.current) clearInterval(countdownTimerRef.current)
+    countdownTimerRef.current = null
+    setShootingState('idle')
+    setCountdown(countdownDurationRef.current)
+  }
 
   // Start the 3.. 2.. 1.. countdown for the current shot
   const startCountdownSequence = () => {
-    if (shootingState === 'countdown' || shootingState === 'flash') return
+    if (countdownTimerRef.current) clearInterval(countdownTimerRef.current)
+    if (breakTimerRef.current) clearInterval(breakTimerRef.current)
 
     setShootingState('countdown')
-    setCountdown(countdownDuration)
+    setCountdown(countdownDurationRef.current)
 
-    if (soundEnabled) soundFX.playBeep(false)
+    if (soundEnabledRef.current) {
+      try {
+        soundFX.playBeep(false)
+      } catch {}
+    }
 
-    let currentSec = countdownDuration
-    const interval = setInterval(() => {
+    let currentSec = countdownDurationRef.current
+    countdownTimerRef.current = setInterval(() => {
       currentSec -= 1
       if (currentSec > 0) {
         setCountdown(currentSec)
-        if (soundEnabled) soundFX.playBeep(false)
+        if (soundEnabledRef.current) {
+          try {
+            soundFX.playBeep(false)
+          } catch {}
+        }
       } else {
-        clearInterval(interval)
+        clearInterval(countdownTimerRef.current)
+        countdownTimerRef.current = null
         setCountdown(0)
         executePhotoCapture()
       }
@@ -224,65 +273,96 @@ export default function CameraView({
 
   // Execute snapshot capture from video stream
   const executePhotoCapture = () => {
+    if (countdownTimerRef.current) clearInterval(countdownTimerRef.current)
+    if (breakTimerRef.current) clearInterval(breakTimerRef.current)
+
     const video = videoRef.current
     if (!video) {
       setShootingState('idle')
-      setCountdown(countdownDuration)
+      setCountdown(countdownDurationRef.current)
       return
     }
 
     setShootingState('flash')
 
-    if (soundEnabled) {
-      soundFX.playBeep(true)
-      setTimeout(() => soundFX.playShutter(), 150)
+    if (soundEnabledRef.current) {
+      try {
+        soundFX.playBeep(true)
+        setTimeout(() => {
+          try { soundFX.playShutter() } catch {}
+        }, 150)
+      } catch {}
     }
 
     // Flash animation
     setIsFlashing(true)
-    setTimeout(() => setIsFlashing(false), 300)
+    setTimeout(() => setIsFlashing(false), 250)
 
-    // Snapshot canvas
-    const canvas = document.createElement('canvas')
-    const vWidth = video.videoWidth || 1280
-    const vHeight = video.videoHeight || 720
-    canvas.width = vWidth
-    canvas.height = vHeight
+    try {
+      // Snapshot canvas
+      const canvas = document.createElement('canvas')
+      const vWidth = video.videoWidth || 1280
+      const vHeight = video.videoHeight || 720
+      canvas.width = vWidth
+      canvas.height = vHeight
 
-    const ctx = canvas.getContext('2d')
+      const ctx = canvas.getContext('2d')
+      if (!ctx) throw new Error('Cannot acquire canvas 2D context')
 
-    // Mirror user-facing camera
-    if (facingMode === 'user') {
-      ctx.translate(canvas.width, 0)
-      ctx.scale(-1, 1)
-    }
-
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.95)
-
-    // Extract captured frames for Boomerang MP4
-    const capturedVideoFrames = ringBufferRef.current.toArray()
-    ringBufferRef.current.clear()
-
-    setTimeout(() => {
-      // Reset countdown cleanly so it NEVER gets stuck at 0
-      setCountdown(countdownDuration)
-
-      if (isRetakingSingleShot || currentShotIndex + 1 >= shotsCount) {
-        setShootingState('idle')
-      } else if (!isAutoSequence) {
-        setShootingState('idle')
+      // Mirror user-facing camera
+      if (facingModeRef.current === 'user') {
+        ctx.translate(canvas.width, 0)
+        ctx.scale(-1, 1)
       }
-      // If isAutoSequence, the useEffect on currentShotIndex will set 'pose_transition'
 
-      onPhotoTaken(dataUrl, capturedVideoFrames)
-    }, 350)
-  }
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.95)
 
-  // Cancel/stop shooting sequence
-  const handleCancelSequence = () => {
-    setShootingState('idle')
-    setCountdown(countdownDuration)
+      // Extract captured frames for Boomerang MP4 safely without throwing
+      let capturedVideoFrames = []
+      try {
+        if (ringBufferRef.current) {
+          if (typeof ringBufferRef.current.extractAndReset === 'function') {
+            capturedVideoFrames = ringBufferRef.current.extractAndReset()
+          } else if (typeof ringBufferRef.current.toArray === 'function') {
+            capturedVideoFrames = ringBufferRef.current.toArray()
+          } else if (typeof ringBufferRef.current.getFrames === 'function') {
+            capturedVideoFrames = ringBufferRef.current.getFrames()
+          }
+        }
+      } catch (bufErr) {
+        console.warn('Video buffer extraction failed:', bufErr)
+      }
+
+      setTimeout(() => {
+        // Reset countdown cleanly so it NEVER gets stuck at 0
+        setCountdown(countdownDurationRef.current)
+
+        const isLastShot =
+          isRetakingSingleShotRef.current ||
+          currentShotIndexRef.current + 1 >= shotsCountRef.current
+
+        if (isLastShot) {
+          setShootingState('idle')
+        } else if (!isAutoSequenceRef.current) {
+          setShootingState('idle')
+        } else {
+          // Immediately enter pose transition break for next pose
+          setShootingState('pose_transition')
+          startPoseBreak()
+        }
+
+        try {
+          onPhotoTaken(dataUrl, capturedVideoFrames)
+        } catch (callbackErr) {
+          console.error('onPhotoTaken error:', callbackErr)
+        }
+      }, 300)
+    } catch (err) {
+      console.error('Fatal snapshot capture error:', err)
+      setShootingState('idle')
+      setCountdown(countdownDurationRef.current)
+    }
   }
 
   const toggleFacingMode = () => {
@@ -475,7 +555,7 @@ export default function CameraView({
               Tạm Dừng Chụp
             </button>
             <button
-              onClick={startCountdownSequence}
+              onClick={handleSkipBreakAndShoot}
               className="px-5 py-2 rounded-full bg-[#FF3D96] hover:bg-[#E62E84] text-white text-xs font-black transition active:scale-95 cursor-pointer shadow-lg shadow-pink-500/30 flex items-center gap-1.5"
             >
               <span>Chụp Luôn</span>
