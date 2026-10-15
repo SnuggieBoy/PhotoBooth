@@ -193,14 +193,48 @@ export async function exportBoomerangMp4({
       ctx.restore()
     })
 
-    // 4. Draw Stickers
-    ctx.font = `${56}px sans-serif`
-    ctx.textAlign = 'center'
-    ctx.textBaseline = 'middle'
+    // 4. Draw Stickers (with rotation, scale, and types)
     stickers.forEach((stk) => {
       const sx = (stk.x / 100) * videoWidth
       const sy = (stk.y / 100) * videoHeight
-      ctx.fillText(stk.emoji, sx, sy)
+      const stickerScale = stk.scale || 1
+      const rotation = ((stk.rotation || 0) * Math.PI) / 180
+
+      ctx.save()
+      ctx.translate(sx, sy)
+      ctx.rotate(rotation)
+
+      if (stk.type === 'text') {
+        ctx.font = `900 ${22 * stickerScale}px sans-serif`
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        const metrics = ctx.measureText(stk.content)
+        const bgW = metrics.width + 24 * stickerScale
+        const bgH = 34 * stickerScale
+        ctx.fillStyle = stk.badgeBg || '#ff3d96'
+        ctx.beginPath()
+        ctx.roundRect(-bgW / 2, -bgH / 2, bgW, bgH, 17 * stickerScale)
+        ctx.fill()
+        ctx.fillStyle = stk.textColor || '#ffffff'
+        ctx.fillText(stk.content, 0, 0)
+      } else if (stk.type === 'tape') {
+        ctx.font = `900 ${18 * stickerScale}px monospace`
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        const metrics = ctx.measureText(stk.content)
+        const bgW = metrics.width + 32 * stickerScale
+        const bgH = 30 * stickerScale
+        ctx.fillStyle = stk.bg || '#ffe4e6'
+        ctx.fillRect(-bgW / 2, -bgH / 2, bgW, bgH)
+        ctx.fillStyle = stk.color || '#f43f5e'
+        ctx.fillText(stk.content, 0, 0)
+      } else {
+        ctx.font = `${54 * stickerScale}px sans-serif`
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        ctx.fillText(stk.content || stk.emoji, 0, 0)
+      }
+      ctx.restore()
     })
 
     // 5. Draw Purikura Doodles

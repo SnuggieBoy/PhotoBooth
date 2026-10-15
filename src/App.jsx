@@ -6,7 +6,7 @@ import ReviewScreen from './components/ReviewScreen'
 import DecorateScreen from './components/DecorateScreen'
 import ResultScreen from './components/ResultScreen'
 
-import { FILTERS, FRAME_COLORS, STICKERS } from './utils/filters'
+import { FILTERS, FRAME_COLORS, FRAME_PATTERNS } from './utils/filters'
 import { COLLAB_FRAMES } from './utils/collabFrames'
 import {
   BRUSH_TYPES,
@@ -30,6 +30,8 @@ export default function App() {
   const [layout, setLayout] = useState('strip-4') // 'strip-4' | 'grid-4' | 'strip-2'
   const [selectedFilter, setSelectedFilter] = useState(FILTERS[1]) // Haru default
   const [frameColor, setFrameColor] = useState(FRAME_COLORS[0]) // White
+  const [framePattern, setFramePattern] = useState(FRAME_PATTERNS[0]) // Solid default
+  const [photoRadius, setPhotoRadius] = useState('12px')
   const [selectedCollabFrame, setSelectedCollabFrame] = useState(COLLAB_FRAMES[0]) // None
   const [countdownDuration, setCountdownDuration] = useState(3) // 3s
   const [customText, setCustomText] = useState('SNUGGIE PHOTOBOOTH')
@@ -42,8 +44,9 @@ export default function App() {
   // Single-shot retake state (when user retakes a specific photo from ReviewScreen)
   const [retakeTargetIndex, setRetakeTargetIndex] = useState(null)
 
-  // Placed Stickers on Strip
+  // Placed Stickers on Strip (with x, y, scale, rotation, type, content, badgeBg, textColor)
   const [placedStickers, setPlacedStickers] = useState([])
+  const [selectedStickerId, setSelectedStickerId] = useState(null)
 
   // Purikura Doodle Studio State
   const [doodleStrokes, setDoodleStrokes] = useState([])
@@ -86,7 +89,6 @@ export default function App() {
     if (updatedPhotos.length < targetShotsCount) {
       setCurrentShotIndex(updatedPhotos.length)
     } else {
-      // Completed all target shots -> advance to Review Screen
       setStep('review')
     }
   }
@@ -98,6 +100,7 @@ export default function App() {
     setCurrentShotIndex(0)
     setRetakeTargetIndex(null)
     setPlacedStickers([])
+    setSelectedStickerId(null)
     setDoodleStrokes([])
     setDoodleUndoStack([])
     setBoomerangVideoUrl(null)
@@ -117,19 +120,35 @@ export default function App() {
     }
   }
 
-  // Sticker Handlers
-  const handleAddSticker = (emoji) => {
+  // Interactive Sticker Handlers
+  const handleAddSticker = (item) => {
+    const isObject = typeof item === 'object' && item !== null
     const newSticker = {
       id: Date.now() + Math.random(),
-      emoji,
-      x: 30 + Math.random() * 40,
-      y: 20 + Math.random() * 60,
+      type: isObject ? item.type || 'emoji' : 'emoji',
+      content: isObject ? item.content : item,
+      badgeBg: isObject ? item.badgeBg : undefined,
+      textColor: isObject ? item.textColor : undefined,
+      bg: isObject ? item.bg : undefined,
+      color: isObject ? item.color : undefined,
+      x: 35 + Math.random() * 30,
+      y: 25 + Math.random() * 50,
+      scale: 1.1,
+      rotation: Math.round(Math.random() * 16 - 8),
     }
     setPlacedStickers((prev) => [...prev, newSticker])
+    setSelectedStickerId(newSticker.id)
+  }
+
+  const handleUpdateSticker = (id, updates) => {
+    setPlacedStickers((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, ...updates } : s))
+    )
   }
 
   const handleRemoveSticker = (id) => {
     setPlacedStickers((prev) => prev.filter((s) => s.id !== id))
+    if (selectedStickerId === id) setSelectedStickerId(null)
   }
 
   // Doodle Handlers
@@ -160,7 +179,7 @@ export default function App() {
     }
   }
 
-  // High-Resolution 300 DPI Canvas Builder
+  // High-Resolution 300 DPI Canvas Builder (Synchronized with filters, radius, and sticker transforms)
   const renderPhotoStripToCanvas = async (scale = 3) => {
     if (photos.length === 0) return null
 
@@ -174,23 +193,53 @@ export default function App() {
     canvas.width = stripWidth
     canvas.height = stripHeight
 
-    // Fill Frame Background
+    // 1. Fill Frame Background
     ctx.fillStyle = frameColor.bg
     ctx.fillRect(0, 0, stripWidth, stripHeight)
 
-    // Header Text
+    // Optional Frame Texture Pattern
+    if (framePattern && framePattern.id === 'grid') {
+      ctx.strokeStyle = '#ff3d9615'
+      ctx.lineWidth = 1 * scale
+      for (let gx = 0; gx < stripWidth; gx += 20 * scale) {
+        ctx.beginPath()
+        ctx.moveTo(gx, 0)
+        ctx.lineTo(gx, stripHeight)
+        ctx.stroke()
+      }
+      for (let gy = 0; gy < stripHeight; gy += 20 * scale) {
+        ctx.beginPath()
+        ctx.moveTo(0, gy)
+        ctx.lineTo(stripWidth, gy)
+        ctx.stroke()
+      }
+    } else if (framePattern && framePattern.id === 'dots') {
+      ctx.fillStyle = '#ec489920'
+      const dotSpacing = 24 * scale
+      for (let dx = 12 * scale; dx < stripWidth; dx += dotSpacing) {
+        for (let dy = 12 * scale; dy < stripHeight; dy += dotSpacing) {
+          ctx.beginPath()
+          ctx.arc(dx, dy, 2 * scale, 0, Math.PI * 2)
+          ctx.fill()
+        }
+      }
+    }
+
+    // 2. Header Text
     ctx.fillStyle = frameColor.text
     ctx.font = `900 ${14 * scale}px sans-serif`
     ctx.textAlign = 'center'
     ctx.letterSpacing = '3px'
     ctx.fillText(customText.toUpperCase(), stripWidth / 2, 28 * scale)
 
-    // Draw Photos onto Canvas
+    // 3. Draw Photos onto Canvas (with live filter & rounded corners)
     const photoWidth = (isGrid ? 165 : 224) * scale
     const photoHeight = (isGrid ? 165 : 142) * scale
     const paddingX = 18 * scale
     const startY = 42 * scale
     const gap = 12 * scale
+    const numRadius = parseInt(photoRadius) || 12
+    const cornerRadius = numRadius * scale
 
     const loadedImages = await Promise.all(
       photos.map(
@@ -215,21 +264,71 @@ export default function App() {
       }
 
       ctx.save()
+      // Apply active filter CSS (e.g. Haru Film, Peach Glow, etc.)
+      if (selectedFilter && selectedFilter.css && selectedFilter.css !== 'none') {
+        ctx.filter = selectedFilter.css
+      }
+
+      // Clip rounded photo corners
+      if (cornerRadius > 0 && typeof ctx.roundRect === 'function') {
+        ctx.beginPath()
+        ctx.roundRect(x, y, photoWidth, photoHeight, cornerRadius)
+        ctx.clip()
+      }
+
       ctx.drawImage(img, x, y, photoWidth, photoHeight)
       ctx.restore()
     })
 
-    // Draw Placed Stickers
-    ctx.font = `${28 * scale}px sans-serif`
-    ctx.textAlign = 'center'
-    ctx.textBaseline = 'middle'
+    // 4. Draw Placed Stickers (with rotation, scale, and types)
     placedStickers.forEach((stk) => {
       const sx = (stk.x / 100) * stripWidth
       const sy = (stk.y / 100) * stripHeight
-      ctx.fillText(stk.emoji, sx, sy)
+      const stickerScale = (stk.scale || 1) * scale
+      const rotation = ((stk.rotation || 0) * Math.PI) / 180
+
+      ctx.save()
+      ctx.translate(sx, sy)
+      ctx.rotate(rotation)
+
+      if (stk.type === 'text') {
+        ctx.font = `900 ${11 * stickerScale}px sans-serif`
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        const metrics = ctx.measureText(stk.content)
+        const bgW = metrics.width + 16 * stickerScale
+        const bgH = 22 * stickerScale
+        ctx.fillStyle = stk.badgeBg || '#ff3d96'
+        ctx.beginPath()
+        if (typeof ctx.roundRect === 'function') {
+          ctx.roundRect(-bgW / 2, -bgH / 2, bgW, bgH, 11 * stickerScale)
+        } else {
+          ctx.rect(-bgW / 2, -bgH / 2, bgW, bgH)
+        }
+        ctx.fill()
+        ctx.fillStyle = stk.textColor || '#ffffff'
+        ctx.fillText(stk.content, 0, 0)
+      } else if (stk.type === 'tape') {
+        ctx.font = `900 ${10 * stickerScale}px monospace`
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        const metrics = ctx.measureText(stk.content)
+        const bgW = metrics.width + 24 * stickerScale
+        const bgH = 20 * stickerScale
+        ctx.fillStyle = stk.bg || '#ffe4e6'
+        ctx.fillRect(-bgW / 2, -bgH / 2, bgW, bgH)
+        ctx.fillStyle = stk.color || '#f43f5e'
+        ctx.fillText(stk.content, 0, 0)
+      } else {
+        ctx.font = `${28 * stickerScale}px sans-serif`
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        ctx.fillText(stk.content || stk.emoji, 0, 0)
+      }
+      ctx.restore()
     })
 
-    // Draw Purikura Doodles with Sub-Pixel Scale Alignment
+    // 5. Draw Purikura Doodles with Sub-Pixel Scale Alignment
     if (doodleStrokes.length > 0) {
       const previewEl = stripRef.current
       const previewWidth = previewEl?.clientWidth || (isGrid ? 380 : 260)
@@ -240,7 +339,7 @@ export default function App() {
       })
     }
 
-    // Footer Info
+    // 6. Footer Info
     const footerY = stripHeight - 20 * scale
     ctx.font = `700 ${9 * scale}px sans-serif`
     ctx.textAlign = 'left'
@@ -296,7 +395,7 @@ export default function App() {
         customText,
         stickers: placedStickers,
         doodleStrokes,
-        filterCss: selectedFilter.css,
+        filterCss: selectedFilter?.css || 'none',
         language,
         onProgress: (p) => setExportProgress(p),
       })
@@ -368,6 +467,7 @@ export default function App() {
     setCurrentShotIndex(0)
     setRetakeTargetIndex(null)
     setPlacedStickers([])
+    setSelectedStickerId(null)
     setDoodleStrokes([])
     setDoodleUndoStack([])
     setBoomerangVideoUrl(null)
@@ -481,11 +581,20 @@ export default function App() {
           layout={layout}
           frameColor={frameColor}
           setFrameColor={setFrameColor}
+          framePattern={framePattern}
+          setFramePattern={setFramePattern}
+          selectedFilter={selectedFilter}
+          setSelectedFilter={setSelectedFilter}
+          photoRadius={photoRadius}
+          setPhotoRadius={setPhotoRadius}
           customText={customText}
           setCustomText={setCustomText}
           placedStickers={placedStickers}
           onAddSticker={handleAddSticker}
+          onUpdateSticker={handleUpdateSticker}
           onRemoveSticker={handleRemoveSticker}
+          selectedStickerId={selectedStickerId}
+          setSelectedStickerId={setSelectedStickerId}
           doodleStrokes={doodleStrokes}
           onDoodleStrokeComplete={handleDoodleStrokeComplete}
           onUndoDoodle={handleUndoDoodle}
@@ -513,6 +622,9 @@ export default function App() {
           photos={photos}
           layout={layout}
           frameColor={frameColor}
+          framePattern={framePattern}
+          filterCss={selectedFilter?.css}
+          photoRadius={photoRadius}
           customText={customText}
           placedStickers={placedStickers}
           doodleStrokes={doodleStrokes}

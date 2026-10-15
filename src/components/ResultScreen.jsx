@@ -21,6 +21,9 @@ export default function ResultScreen({
   photos,
   layout,
   frameColor,
+  framePattern,
+  filterCss,
+  photoRadius,
   customText,
   placedStickers,
   doodleStrokes,
@@ -105,6 +108,9 @@ export default function ResultScreen({
                 photos={photos}
                 layout={layout}
                 frameColor={frameColor}
+                framePattern={framePattern}
+                filterCss={filterCss}
+                photoRadius={photoRadius}
                 customText={customText}
                 stickers={placedStickers}
                 doodleStrokes={doodleStrokes}

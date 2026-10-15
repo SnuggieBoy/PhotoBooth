@@ -21,6 +21,16 @@ export const FILTERS = [
     color: '#06b6d4',
   },
   {
+    id: 'peach',
+    nameKey: 'filter_peach',
+    subKey: 'filter_peach_sub',
+    name: 'Peach Glow',
+    enName: 'Soft Rosy',
+    css: 'brightness(108%) contrast(98%) saturate(125%) sepia(10%) hue-rotate(-5deg)',
+    badge: 'Cute',
+    color: '#fb7185',
+  },
+  {
     id: 'y2k',
     nameKey: 'filter_y2k',
     subKey: 'filter_y2k_sub',
@@ -73,7 +83,86 @@ export const FRAME_COLORS = [
   { id: 'film-strip', nameKey: 'color_film', name: 'Film Negative', bg: '#18181b', text: '#f43f5e', border: '#27272a', isFilm: true },
 ]
 
-export const STICKERS = [
-  '✨', '💖', '🎀', '🧸', '🌸', '👑', '🍒', '🐱',
-  '🐰', '⭐', '🕶️', '⚡', '🎂', '🥳', '📸', '💯'
+// Frame Patterns & Textures
+export const FRAME_PATTERNS = [
+  { id: 'solid', name: 'Màu Trơn', icon: '◻️' },
+  { id: 'grid', name: 'Lưới Y2K', icon: '🪟', css: 'radial-gradient(#ff3d9620 1px, transparent 1px)', bgSize: '12px 12px' },
+  { id: 'dots', name: 'Chấm Bi', icon: '🫧', css: 'radial-gradient(#ec489930 2px, transparent 2px)', bgSize: '16px 16px' },
+  { id: 'stripes', name: 'Sọc Chéo', icon: '💈', css: 'repeating-linear-gradient(45deg, #fce7f340, #fce7f340 10px, transparent 10px, transparent 20px)' },
 ]
+
+// Thematic Sticker Packs for Purikura Decoration Studio
+export const STICKER_PACKS = {
+  emojis: {
+    id: 'emojis',
+    title: 'Y2K Kawaii 🎀',
+    items: [
+      { type: 'emoji', content: '✨' },
+      { type: 'emoji', content: '💖' },
+      { type: 'emoji', content: '🎀' },
+      { type: 'emoji', content: '🧸' },
+      { type: 'emoji', content: '🌸' },
+      { type: 'emoji', content: '👑' },
+      { type: 'emoji', content: '🍒' },
+      { type: 'emoji', content: '🐱' },
+      { type: 'emoji', content: '🐰' },
+      { type: 'emoji', content: '⭐' },
+      { type: 'emoji', content: '🕶️' },
+      { type: 'emoji', content: '⚡' },
+      { type: 'emoji', content: '🎂' },
+      { type: 'emoji', content: '🥳' },
+      { type: 'emoji', content: '📸' },
+      { type: 'emoji', content: '💯' },
+      { type: 'emoji', content: '🦋' },
+      { type: 'emoji', content: '🍓' },
+      { type: 'emoji', content: '💄' },
+      { type: 'emoji', content: '🪞' },
+      { type: 'emoji', content: '🍭' },
+      { type: 'emoji', content: '💐' },
+      { type: 'emoji', content: '💫' },
+      { type: 'emoji', content: '🫶' },
+    ],
+  },
+  hangul: {
+    id: 'hangul',
+    title: 'K-Hangul Stamps 🇰🇷',
+    items: [
+      { type: 'text', content: '대박', badgeBg: '#ff3d96', textColor: '#ffffff' },
+      { type: 'text', content: '귀여워', badgeBg: '#f472b6', textColor: '#ffffff' },
+      { type: 'text', content: '인생네컷', badgeBg: '#38bdf8', textColor: '#ffffff' },
+      { type: 'text', content: '하트 💖', badgeBg: '#fb7185', textColor: '#ffffff' },
+      { type: 'text', content: '찰칵 📸', badgeBg: '#fbbf24', textColor: '#1e293b' },
+      { type: 'text', content: '사랑해', badgeBg: '#ec4899', textColor: '#ffffff' },
+      { type: 'text', content: '레전드 ✨', badgeBg: '#c084fc', textColor: '#ffffff' },
+      { type: 'text', content: '오늘의 우리', badgeBg: '#4ade80', textColor: '#064e3b' },
+    ],
+  },
+  words: {
+    id: 'words',
+    title: 'Y2K Editorial ⚡',
+    items: [
+      { type: 'text', content: 'BESTIES ✨', badgeBg: '#ff3d96', textColor: '#ffffff' },
+      { type: 'text', content: 'HAPPY DAY ☀️', badgeBg: '#fbbf24', textColor: '#1e293b' },
+      { type: 'text', content: 'LOVE YOU 💖', badgeBg: '#f43f5e', textColor: '#ffffff' },
+      { type: 'text', content: 'Y2K VIBE ⚡', badgeBg: '#38bdf8', textColor: '#ffffff' },
+      { type: 'text', content: 'NO FILTER 🌸', badgeBg: '#fbcfe8', textColor: '#9d174d' },
+      { type: 'text', content: 'SUPERSTAR ⭐', badgeBg: '#fde047', textColor: '#854d0e' },
+      { type: 'text', content: 'HARU FILM 🎞️', badgeBg: '#bae6fd', textColor: '#0369a1' },
+      { type: 'text', content: 'PURIKURA 🎀', badgeBg: '#e9d5ff', textColor: '#6b21a8' },
+    ],
+  },
+  tape: {
+    id: 'tape',
+    title: 'Deco Tape 📼',
+    items: [
+      { type: 'tape', content: '★ ★ ★ ★ ★', bg: '#ffe4e6', color: '#f43f5e' },
+      { type: 'tape', content: '♥ LOVE ♥ LOVE ♥', bg: '#fce7f3', color: '#db2777' },
+      { type: 'tape', content: 'SWEET MOMENTS', bg: '#e0f2fe', color: '#0284c7' },
+      { type: 'tape', content: 'PHOTO STUDIO 2026', bg: '#fef3c7', color: '#d97706' },
+      { type: 'tape', content: 'PURIKURA CLUB', bg: '#f3e8ff', color: '#7e22ce' },
+    ],
+  },
+}
+
+// Flat list for quick fallback
+export const STICKERS = STICKER_PACKS.emojis.items.map((i) => i.content)
