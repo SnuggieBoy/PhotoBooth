@@ -27,6 +27,7 @@ export default function ResultScreen({
   customText,
   placedStickers,
   doodleStrokes,
+  selectedFrame,
   onDownloadHD,
   onExportBoomerang,
   onDownloadVideo,
@@ -115,6 +116,7 @@ export default function ResultScreen({
                 stickers={placedStickers}
                 doodleStrokes={doodleStrokes}
                 isDoodleMode={false}
+                selectedFrame={selectedFrame}
               />
             </div>
             <div className="mt-4 flex items-center gap-2 text-xs font-bold text-[#FF3D96]">

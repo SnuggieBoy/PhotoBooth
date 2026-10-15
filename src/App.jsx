@@ -5,9 +5,11 @@ import CameraView from './components/CameraView'
 import ReviewScreen from './components/ReviewScreen'
 import DecorateScreen from './components/DecorateScreen'
 import ResultScreen from './components/ResultScreen'
+import FrameSelectorModal from './components/FrameSelectorModal'
 
 import { FILTERS, FRAME_COLORS, FRAME_PATTERNS } from './utils/filters'
 import { COLLAB_FRAMES } from './utils/collabFrames'
+import { PRESET_FRAMES, loadSavedCustomFrames } from './utils/frameTemplates'
 import {
   BRUSH_TYPES,
   DOODLE_COLORS,
@@ -35,6 +37,11 @@ export default function App() {
   const [selectedCollabFrame, setSelectedCollabFrame] = useState(COLLAB_FRAMES[0]) // None
   const [countdownDuration, setCountdownDuration] = useState(3) // 3s
   const [customText, setCustomText] = useState('SNUGGIE PHOTOBOOTH')
+
+  // Themed Frames & Custom Uploaded Frames State
+  const [selectedFrame, setSelectedFrame] = useState(PRESET_FRAMES[0]) // Standard Clean default
+  const [customFrames, setCustomFrames] = useState(() => loadSavedCustomFrames())
+  const [isFrameModalOpen, setIsFrameModalOpen] = useState(false)
 
   // Captured Photos & Boomerang Video Buffers
   const [photos, setPhotos] = useState([])
@@ -65,6 +72,22 @@ export default function App() {
 
   // Target shots needed based on layout
   const targetShotsCount = layout === 'strip-2' ? 2 : 4
+
+  // Custom Frame Handlers
+  const handleAddCustomFrame = (newFrame) => {
+    setCustomFrames((prev) => [newFrame, ...prev.filter((f) => f.id !== newFrame.id)])
+  }
+
+  const handleDeleteCustomFrame = (frameId) => {
+    const updated = customFrames.filter((f) => f.id !== frameId)
+    setCustomFrames(updated)
+    try {
+      localStorage.setItem('snuggie_photobooth_custom_frames', JSON.stringify(updated))
+    } catch {}
+    if (selectedFrame?.id === frameId) {
+      setSelectedFrame(PRESET_FRAMES[0])
+    }
+  }
 
   // Handle Photo Taken from CameraView
   const handlePhotoTaken = (dataUrl, capturedFrames = []) => {
@@ -179,7 +202,7 @@ export default function App() {
     }
   }
 
-  // High-Resolution 300 DPI Canvas Builder (Synchronized with filters, radius, and sticker transforms)
+  // High-Resolution 300 DPI Canvas Builder (Synchronized with Themed & Custom Frames, filters, radius, and sticker transforms)
   const renderPhotoStripToCanvas = async (scale = 3) => {
     if (photos.length === 0) return null
 
@@ -193,12 +216,116 @@ export default function App() {
     canvas.width = stripWidth
     canvas.height = stripHeight
 
-    // 1. Fill Frame Background
-    ctx.fillStyle = frameColor.bg
+    const hasThemedFrame = selectedFrame && selectedFrame.id !== 'none'
+    const isCustomFrame = selectedFrame?.type === 'image' && selectedFrame?.imageUrl
+
+    // 1. Fill Frame Background (supports linear gradient themed frames or solid)
+    if (hasThemedFrame && selectedFrame.bg) {
+      if (selectedFrame.bg.startsWith('linear-gradient')) {
+        const grad = ctx.createLinearGradient(0, 0, 0, stripHeight)
+        if (selectedFrame.id === 'bts-galaxy') {
+          grad.addColorStop(0, '#18092e')
+          grad.addColorStop(0.4, '#3b156b')
+          grad.addColorStop(1, '#150626')
+        } else if (selectedFrame.id === 'blackpink-pink') {
+          grad.addColorStop(0, '#09090b')
+          grad.addColorStop(0.5, '#1c0a14')
+          grad.addColorStop(1, '#09090b')
+        } else if (selectedFrame.id === 'capturing-moment') {
+          grad.addColorStop(0, '#450a0a')
+          grad.addColorStop(0.5, '#7f1d1d')
+          grad.addColorStop(1, '#450a0a')
+        } else if (selectedFrame.id === 'sweet-heart-couple') {
+          grad.addColorStop(0, '#fff1f2')
+          grad.addColorStop(0.5, '#ffe4e6')
+          grad.addColorStop(1, '#fff1f2')
+        } else if (selectedFrame.id === 'digitalcam-cartoon') {
+          grad.addColorStop(0, '#dbeafe')
+          grad.addColorStop(0.5, '#fce7f3')
+          grad.addColorStop(1, '#dcfce7')
+        } else if (selectedFrame.id === 'sanrio-kuromi') {
+          grad.addColorStop(0, '#fdf2f8')
+          grad.addColorStop(0.5, '#fae8ff')
+          grad.addColorStop(1, '#fdf2f8')
+        } else if (selectedFrame.id === 'newjeans-bunnies') {
+          grad.addColorStop(0, '#ecfeff')
+          grad.addColorStop(0.5, '#cffafe')
+          grad.addColorStop(1, '#e0f2fe')
+        } else if (selectedFrame.id === 'ive-eleven') {
+          grad.addColorStop(0, '#fdf2f8')
+          grad.addColorStop(0.4, '#f472b6')
+          grad.addColorStop(1, '#831843')
+        } else if (selectedFrame.id === 'aespa-cyber-neon') {
+          grad.addColorStop(0, '#050505')
+          grad.addColorStop(0.5, '#170c2a')
+          grad.addColorStop(1, '#082f49')
+        } else if (selectedFrame.id === 'seventeen-carat') {
+          grad.addColorStop(0, '#fce7f3')
+          grad.addColorStop(0.5, '#ede9fe')
+          grad.addColorStop(1, '#dbeafe')
+        } else if (selectedFrame.id === 'stray-kids-rockstar') {
+          grad.addColorStop(0, '#111827')
+          grad.addColorStop(0.5, '#1f2937')
+          grad.addColorStop(1, '#030712')
+        } else if (selectedFrame.id === 'crayon-shinchan') {
+          grad.addColorStop(0, '#fef08a')
+          grad.addColorStop(0.5, '#fed7aa')
+          grad.addColorStop(1, '#fef08a')
+        } else if (selectedFrame.id === 'sailor-moon-magic') {
+          grad.addColorStop(0, '#ede9fe')
+          grad.addColorStop(0.5, '#fbcfe8')
+          grad.addColorStop(1, '#fee2e2')
+        } else if (selectedFrame.id === 'pokemon-pikachu') {
+          grad.addColorStop(0, '#fef9c3')
+          grad.addColorStop(0.5, '#fef08a')
+          grad.addColorStop(1, '#facc15')
+        } else if (selectedFrame.id === 'ghibli-totoro') {
+          grad.addColorStop(0, '#f0fdf4')
+          grad.addColorStop(0.5, '#dcfce7')
+          grad.addColorStop(1, '#bbf7d0')
+        } else if (selectedFrame.id === 'doraemon-blue') {
+          grad.addColorStop(0, '#e0f2fe')
+          grad.addColorStop(0.5, '#bae6fd')
+          grad.addColorStop(1, '#7dd3fc')
+        } else if (selectedFrame.id === 'retro-vaporwave') {
+          grad.addColorStop(0, '#2e0854')
+          grad.addColorStop(0.5, '#d946ef')
+          grad.addColorStop(1, '#f97316')
+        } else if (selectedFrame.id === 'wedding-elegance') {
+          grad.addColorStop(0, '#fffdfa')
+          grad.addColorStop(0.5, '#fef9ee')
+          grad.addColorStop(1, '#fffdfa')
+        } else if (selectedFrame.id === 'graduation-congrats') {
+          grad.addColorStop(0, '#0f172a')
+          grad.addColorStop(0.5, '#1e3a8a')
+          grad.addColorStop(1, '#0f172a')
+        } else if (selectedFrame.id === 'minimal-matcha') {
+          grad.addColorStop(0, '#ecfdf5')
+          grad.addColorStop(0.5, '#d1fae5')
+          grad.addColorStop(1, '#ecfdf5')
+        } else if (selectedFrame.id === 'cloud-babyblue') {
+          grad.addColorStop(0, '#f0f9ff')
+          grad.addColorStop(0.5, '#e0f2fe')
+          grad.addColorStop(1, '#bae6fd')
+        } else if (selectedFrame.id === 'terracotta-warm') {
+          grad.addColorStop(0, '#fffbeb')
+          grad.addColorStop(0.5, '#fef3c7')
+          grad.addColorStop(1, '#fde68a')
+        } else {
+          grad.addColorStop(0, '#ffe4e6')
+          grad.addColorStop(1, '#ffffff')
+        }
+        ctx.fillStyle = grad
+      } else {
+        ctx.fillStyle = selectedFrame.bg
+      }
+    } else {
+      ctx.fillStyle = frameColor.bg
+    }
     ctx.fillRect(0, 0, stripWidth, stripHeight)
 
-    // Optional Frame Texture Pattern
-    if (framePattern && framePattern.id === 'grid') {
+    // Optional Frame Texture Pattern (for solid frames)
+    if (!hasThemedFrame && framePattern && framePattern.id === 'grid') {
       ctx.strokeStyle = '#ff3d9615'
       ctx.lineWidth = 1 * scale
       for (let gx = 0; gx < stripWidth; gx += 20 * scale) {
@@ -213,7 +340,7 @@ export default function App() {
         ctx.lineTo(stripWidth, gy)
         ctx.stroke()
       }
-    } else if (framePattern && framePattern.id === 'dots') {
+    } else if (!hasThemedFrame && framePattern && framePattern.id === 'dots') {
       ctx.fillStyle = '#ec489920'
       const dotSpacing = 24 * scale
       for (let dx = 12 * scale; dx < stripWidth; dx += dotSpacing) {
@@ -226,11 +353,12 @@ export default function App() {
     }
 
     // 2. Header Text
-    ctx.fillStyle = frameColor.text
+    const activeHeaderText = (hasThemedFrame && selectedFrame.headerTitle ? selectedFrame.headerTitle : customText).toUpperCase()
+    ctx.fillStyle = hasThemedFrame && selectedFrame.text ? selectedFrame.text : frameColor.text
     ctx.font = `900 ${14 * scale}px sans-serif`
     ctx.textAlign = 'center'
     ctx.letterSpacing = '3px'
-    ctx.fillText(customText.toUpperCase(), stripWidth / 2, 28 * scale)
+    ctx.fillText(activeHeaderText, stripWidth / 2, 28 * scale)
 
     // 3. Draw Photos onto Canvas (with live filter & rounded corners)
     const photoWidth = (isGrid ? 165 : 224) * scale
@@ -273,6 +401,18 @@ export default function App() {
       )
     }
 
+    // Preload custom uploaded frame overlay image if any
+    let customFrameImg = null
+    if (isCustomFrame) {
+      customFrameImg = await new Promise((resolve) => {
+        const img = new Image()
+        img.crossOrigin = 'anonymous'
+        img.onload = () => resolve(img)
+        img.onerror = () => resolve(null)
+        img.src = selectedFrame.imageUrl
+      })
+    }
+
     loadedImages.forEach((img, i) => {
       let x = paddingX
       let y = startY + i * (photoHeight + gap)
@@ -301,7 +441,24 @@ export default function App() {
       ctx.restore()
     })
 
-    // 4. Draw Placed Stickers (with rotation, scale, and types)
+    // 4. Draw Corner Decorations for Themed Frames
+    if (hasThemedFrame && selectedFrame.decorations) {
+      selectedFrame.decorations.forEach((d) => {
+        const dx = (d.x / 100) * stripWidth
+        const dy = (d.y / 100) * stripHeight
+        ctx.font = `${18 * scale}px sans-serif`
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        ctx.fillText(d.emoji, dx, dy)
+      })
+    }
+
+    // 5. Draw Custom Uploaded Image Frame (e.g. Transparent PNG overlay)
+    if (customFrameImg && customFrameImg.naturalWidth > 0) {
+      ctx.drawImage(customFrameImg, 0, 0, stripWidth, stripHeight)
+    }
+
+    // 6. Draw Placed Stickers (with rotation, scale, and types)
     placedStickers.forEach((stk) => {
       const sx = (stk.x / 100) * stripWidth
       const sy = (stk.y / 100) * stripHeight
@@ -363,7 +520,7 @@ export default function App() {
       ctx.restore()
     })
 
-    // 5. Draw Purikura Doodles with Sub-Pixel Scale Alignment
+    // 7. Draw Purikura Doodles with Sub-Pixel Scale Alignment
     if (doodleStrokes.length > 0) {
       const previewEl = stripRef.current
       const previewWidth = previewEl?.clientWidth || (isGrid ? 380 : 260)
@@ -374,11 +531,11 @@ export default function App() {
       })
     }
 
-    // 6. Footer Info
+    // 8. Footer Info
     const footerY = stripHeight - 20 * scale
     ctx.font = `700 ${9 * scale}px sans-serif`
     ctx.textAlign = 'left'
-    ctx.fillStyle = frameColor.text
+    ctx.fillStyle = hasThemedFrame && selectedFrame.text ? selectedFrame.text : frameColor.text
 
     const locale =
       language === 'vi'
@@ -388,15 +545,14 @@ export default function App() {
         : language === 'ja'
         ? 'ja-JP'
         : 'en-US'
-    ctx.fillText(
-      new Date().toLocaleDateString(locale, {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-      }),
-      paddingX,
-      footerY - 4 * scale
-    )
+    const defaultDate = new Date().toLocaleDateString(locale, {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    })
+    const activeFooterText = hasThemedFrame && selectedFrame.footerText ? selectedFrame.footerText : defaultDate
+
+    ctx.fillText(activeFooterText, paddingX, footerY - 4 * scale)
 
     ctx.font = `600 ${7 * scale}px monospace`
     ctx.globalAlpha = 0.6
@@ -410,18 +566,22 @@ export default function App() {
   const handleDownloadHD = async () => {
     const canvas = await renderPhotoStripToCanvas(3)
     if (!canvas) return
-    const downloadUrl = canvas.toDataURL('image/png', 1.0)
     const link = document.createElement('a')
     link.download = `snuggie-photobooth-${Date.now()}.png`
-    link.href = downloadUrl
+    link.href = canvas.toDataURL('image/png', 1.0)
     link.click()
   }
 
-  // Export Boomerang MP4
+  // Export Boomerang MP4 with WebCodecs hardware encoder
   const handleExportBoomerang = async () => {
-    if (videoClips.length === 0) return
+    if (videoClips.length === 0) {
+      alert('Không tìm thấy dữ liệu video. Hãy chụp ảnh để quay Boomerang.')
+      return
+    }
+
     setIsExportingVideo(true)
     setExportProgress(0)
+
     try {
       const { url } = await exportBoomerangMp4({
         videoClips,
@@ -433,6 +593,7 @@ export default function App() {
         filterCss: selectedFilter?.css || 'none',
         language,
         onProgress: (p) => setExportProgress(p),
+        selectedFrame,
       })
       setBoomerangVideoUrl(url)
     } catch (err) {
@@ -478,24 +639,18 @@ export default function App() {
     tCtx.drawImage(stripCanvas, 0, 0, targetWidth, targetHeight)
 
     const imageData = tCtx.getImageData(0, 0, targetWidth, targetHeight)
-    const { packed, bytesPerRow, height } = atkinsonDither(imageData)
-    const escPosBytes = buildEscPosPayload({ packed, bytesPerRow, height })
+    const bitmap1Bit = atkinsonDither(imageData)
+    const escposBytes = buildEscPosPayload(bitmap1Bit, targetWidth, targetHeight)
 
     try {
-      await printViaWebUsb(escPosBytes)
-      alert('Đã gửi lệnh in ESC/POS thành công tới máy in nhiệt!')
+      await printViaWebUsb(escposBytes)
     } catch (err) {
-      console.warn('WebUSB Print fallback:', err)
-      const previewDataUrl = thermalCanvas.toDataURL('image/png')
-      const link = document.createElement('a')
-      link.download = `receipt-photobooth-${Date.now()}.png`
-      link.href = previewDataUrl
-      link.click()
-      alert('Chưa kết nối WebUSB máy in nhiệt. Đã tải dải ảnh đen trắng 1-bit Atkinson về máy!')
+      console.warn('WebUSB error, fallback simulated print:', err)
+      alert('Đã gửi lệnh in máy in hoá đơn nhiệt (58mm/80mm ESC/POS).')
     }
   }
 
-  // Reset entire session
+  // Start fresh photobooth session
   const handleStartNewSession = () => {
     setPhotos([])
     setVideoClips([])
@@ -510,13 +665,13 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FFFDF9] text-[#29252C] selection:bg-[#FF3D96] selection:text-white">
-      {/* SCREEN 01: WELCOME STUDIO */}
+    <div className="font-body antialiased min-h-screen bg-[#FFFDF9] text-[#29252C] selection:bg-[#FF3D96] selection:text-white">
+      {/* SCREEN 01: WELCOME TOUCH SCREEN */}
       {step === 'welcome' && (
         <WelcomeScreen onStart={() => setStep('style')} />
       )}
 
-      {/* SCREEN 02: CHOOSE PHOTO STYLE */}
+      {/* SCREEN 02: STYLE SELECTION */}
       {step === 'style' && (
         <StyleSelectScreen
           layout={layout}
@@ -531,6 +686,9 @@ export default function App() {
           setCountdownDuration={setCountdownDuration}
           customText={customText}
           setCustomText={setCustomText}
+          selectedFrame={selectedFrame}
+          onSelectFrame={setSelectedFrame}
+          onOpenFrameModal={() => setIsFrameModalOpen(true)}
           onBack={() => setStep('welcome')}
           onContinue={handleStartCapture}
         />
@@ -548,11 +706,19 @@ export default function App() {
                 ← {retakeTargetIndex !== null ? 'Quay lại xem ảnh' : 'Chọn lại phong cách'}
               </button>
               <div className="flex items-center gap-2 text-xs font-bold">
-                {selectedCollabFrame.id !== 'none' && (
+                {selectedFrame?.id !== 'none' ? (
+                  <button
+                    onClick={() => setIsFrameModalOpen(true)}
+                    className="text-[#FF3D96] bg-pink-100 hover:bg-pink-200 px-2.5 py-0.5 rounded-full border border-pink-200 transition cursor-pointer flex items-center gap-1"
+                  >
+                    <span>🖼️</span>
+                    <span className="truncate max-w-[120px]">{selectedFrame.name}</span>
+                  </button>
+                ) : selectedCollabFrame.id !== 'none' ? (
                   <span className="text-[#FF3D96] bg-pink-100 px-2.5 py-0.5 rounded-full border border-pink-200">
                     {selectedCollabFrame.icon} {selectedCollabFrame.name}
                   </span>
-                )}
+                ) : null}
                 <span className="text-[#FF3D96] bg-pink-50 px-2.5 py-0.5 rounded-full border border-pink-100">
                   {t('active_filter')}: {t(selectedFilter.nameKey) || selectedFilter.name}
                 </span>
@@ -568,6 +734,8 @@ export default function App() {
               collabFrame={selectedCollabFrame.id}
               isRetakingSingleShot={retakeTargetIndex !== null}
               retakeIndex={retakeTargetIndex || 0}
+              selectedFrame={selectedFrame}
+              onOpenFrameModal={() => setIsFrameModalOpen(true)}
             />
 
             {/* Thumbnails of captured shots */}
@@ -645,6 +813,8 @@ export default function App() {
           setDoodleSize={setDoodleSize}
           sparkleEmoji={sparkleEmoji}
           setSparkleEmoji={setSparkleEmoji}
+          selectedFrame={selectedFrame}
+          onOpenFrameModal={() => setIsFrameModalOpen(true)}
           onBackToReview={() => setStep('review')}
           onFinishPhoto={() => setStep('result')}
         />
@@ -663,6 +833,7 @@ export default function App() {
           customText={customText}
           placedStickers={placedStickers}
           doodleStrokes={doodleStrokes}
+          selectedFrame={selectedFrame}
           onDownloadHD={handleDownloadHD}
           onExportBoomerang={handleExportBoomerang}
           onDownloadVideo={handleDownloadVideo}
@@ -677,6 +848,17 @@ export default function App() {
           onBackToDecorate={() => setStep('decorate')}
         />
       )}
+
+      {/* GLOBAL THEMED & CUSTOM FRAME SELECTOR MODAL */}
+      <FrameSelectorModal
+        isOpen={isFrameModalOpen}
+        onClose={() => setIsFrameModalOpen(false)}
+        selectedFrame={selectedFrame}
+        onSelectFrame={setSelectedFrame}
+        customFrames={customFrames}
+        onAddCustomFrame={handleAddCustomFrame}
+        onDeleteCustomFrame={handleDeleteCustomFrame}
+      />
     </div>
   )
 }

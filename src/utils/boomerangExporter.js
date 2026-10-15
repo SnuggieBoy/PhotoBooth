@@ -56,6 +56,7 @@ export async function exportBoomerangMp4({
   filterCss = 'none',
   language = 'vi',
   onProgress,
+  selectedFrame,
 }) {
   if (!isWebCodecsSupported()) {
     throw new Error('Trình duyệt không hỗ trợ WebCodecs VideoEncoder.')
@@ -149,6 +150,13 @@ export async function exportBoomerangMp4({
     year: 'numeric',
   })
 
+  // Themed Frame Resolution
+  const hasThemedFrame = selectedFrame && selectedFrame.id !== 'none'
+  const isCustomFrame = selectedFrame?.type === 'image' && selectedFrame?.imageUrl
+  const activeHeader = hasThemedFrame && selectedFrame.headerTitle ? selectedFrame.headerTitle : customText
+  const activeFooter = hasThemedFrame && selectedFrame.footerText ? selectedFrame.footerText : dateStr
+  const activeTextColor = hasThemedFrame && selectedFrame.text ? selectedFrame.text : frameColor.text
+
   // Preload custom image stickers once before the 96-frame loop
   const imageStickerMap = new Map()
   const customImageStickers = stickers.filter((s) => s.type === 'image' && s.content)
@@ -170,20 +178,133 @@ export async function exportBoomerangMp4({
     )
   }
 
+  // Preload custom uploaded frame image overlay if any
+  let customFrameImg = null
+  if (isCustomFrame) {
+    customFrameImg = await new Promise((resolve) => {
+      const img = new Image()
+      img.crossOrigin = 'anonymous'
+      img.onload = () => resolve(img)
+      img.onerror = () => resolve(null)
+      img.src = selectedFrame.imageUrl
+    })
+  }
+
   // Encode 96 frames in a ping-pong loop
   for (let k = 0; k < totalFrames; k++) {
     if (encodeError) throw encodeError
 
-    // 1. Draw Frame Background
-    ctx.fillStyle = frameColor.bg
+    // 1. Draw Frame Background (supports linear gradient themed frames)
+    if (hasThemedFrame && selectedFrame.bg) {
+      if (selectedFrame.bg.startsWith('linear-gradient')) {
+        const grad = ctx.createLinearGradient(0, 0, 0, videoHeight)
+        if (selectedFrame.id === 'bts-galaxy') {
+          grad.addColorStop(0, '#18092e')
+          grad.addColorStop(0.4, '#3b156b')
+          grad.addColorStop(1, '#150626')
+        } else if (selectedFrame.id === 'blackpink-pink') {
+          grad.addColorStop(0, '#09090b')
+          grad.addColorStop(0.5, '#1c0a14')
+          grad.addColorStop(1, '#09090b')
+        } else if (selectedFrame.id === 'capturing-moment') {
+          grad.addColorStop(0, '#450a0a')
+          grad.addColorStop(0.5, '#7f1d1d')
+          grad.addColorStop(1, '#450a0a')
+        } else if (selectedFrame.id === 'sweet-heart-couple') {
+          grad.addColorStop(0, '#fff1f2')
+          grad.addColorStop(0.5, '#ffe4e6')
+          grad.addColorStop(1, '#fff1f2')
+        } else if (selectedFrame.id === 'digitalcam-cartoon') {
+          grad.addColorStop(0, '#dbeafe')
+          grad.addColorStop(0.5, '#fce7f3')
+          grad.addColorStop(1, '#dcfce7')
+        } else if (selectedFrame.id === 'sanrio-kuromi') {
+          grad.addColorStop(0, '#fdf2f8')
+          grad.addColorStop(0.5, '#fae8ff')
+          grad.addColorStop(1, '#fdf2f8')
+        } else if (selectedFrame.id === 'newjeans-bunnies') {
+          grad.addColorStop(0, '#ecfeff')
+          grad.addColorStop(0.5, '#cffafe')
+          grad.addColorStop(1, '#e0f2fe')
+        } else if (selectedFrame.id === 'ive-eleven') {
+          grad.addColorStop(0, '#fdf2f8')
+          grad.addColorStop(0.4, '#f472b6')
+          grad.addColorStop(1, '#831843')
+        } else if (selectedFrame.id === 'aespa-cyber-neon') {
+          grad.addColorStop(0, '#050505')
+          grad.addColorStop(0.5, '#170c2a')
+          grad.addColorStop(1, '#082f49')
+        } else if (selectedFrame.id === 'seventeen-carat') {
+          grad.addColorStop(0, '#fce7f3')
+          grad.addColorStop(0.5, '#ede9fe')
+          grad.addColorStop(1, '#dbeafe')
+        } else if (selectedFrame.id === 'stray-kids-rockstar') {
+          grad.addColorStop(0, '#111827')
+          grad.addColorStop(0.5, '#1f2937')
+          grad.addColorStop(1, '#030712')
+        } else if (selectedFrame.id === 'crayon-shinchan') {
+          grad.addColorStop(0, '#fef08a')
+          grad.addColorStop(0.5, '#fed7aa')
+          grad.addColorStop(1, '#fef08a')
+        } else if (selectedFrame.id === 'sailor-moon-magic') {
+          grad.addColorStop(0, '#ede9fe')
+          grad.addColorStop(0.5, '#fbcfe8')
+          grad.addColorStop(1, '#fee2e2')
+        } else if (selectedFrame.id === 'pokemon-pikachu') {
+          grad.addColorStop(0, '#fef9c3')
+          grad.addColorStop(0.5, '#fef08a')
+          grad.addColorStop(1, '#facc15')
+        } else if (selectedFrame.id === 'ghibli-totoro') {
+          grad.addColorStop(0, '#f0fdf4')
+          grad.addColorStop(0.5, '#dcfce7')
+          grad.addColorStop(1, '#bbf7d0')
+        } else if (selectedFrame.id === 'doraemon-blue') {
+          grad.addColorStop(0, '#e0f2fe')
+          grad.addColorStop(0.5, '#bae6fd')
+          grad.addColorStop(1, '#7dd3fc')
+        } else if (selectedFrame.id === 'retro-vaporwave') {
+          grad.addColorStop(0, '#2e0854')
+          grad.addColorStop(0.5, '#d946ef')
+          grad.addColorStop(1, '#f97316')
+        } else if (selectedFrame.id === 'wedding-elegance') {
+          grad.addColorStop(0, '#fffdfa')
+          grad.addColorStop(0.5, '#fef9ee')
+          grad.addColorStop(1, '#fffdfa')
+        } else if (selectedFrame.id === 'graduation-congrats') {
+          grad.addColorStop(0, '#0f172a')
+          grad.addColorStop(0.5, '#1e3a8a')
+          grad.addColorStop(1, '#0f172a')
+        } else if (selectedFrame.id === 'minimal-matcha') {
+          grad.addColorStop(0, '#ecfdf5')
+          grad.addColorStop(0.5, '#d1fae5')
+          grad.addColorStop(1, '#ecfdf5')
+        } else if (selectedFrame.id === 'cloud-babyblue') {
+          grad.addColorStop(0, '#f0f9ff')
+          grad.addColorStop(0.5, '#e0f2fe')
+          grad.addColorStop(1, '#bae6fd')
+        } else if (selectedFrame.id === 'terracotta-warm') {
+          grad.addColorStop(0, '#fffbeb')
+          grad.addColorStop(0.5, '#fef3c7')
+          grad.addColorStop(1, '#fde68a')
+        } else {
+          grad.addColorStop(0, '#ffe4e6')
+          grad.addColorStop(1, '#ffffff')
+        }
+        ctx.fillStyle = grad
+      } else {
+        ctx.fillStyle = selectedFrame.bg
+      }
+    } else {
+      ctx.fillStyle = frameColor.bg
+    }
     ctx.fillRect(0, 0, videoWidth, videoHeight)
 
     // 2. Draw Header Text
-    ctx.fillStyle = frameColor.text
+    ctx.fillStyle = activeTextColor
     ctx.font = `900 ${28}px sans-serif`
     ctx.textAlign = 'center'
     ctx.letterSpacing = '4px'
-    ctx.fillText(customText.toUpperCase(), videoWidth / 2, 56)
+    ctx.fillText(activeHeader.toUpperCase(), videoWidth / 2, 56)
 
     // 3. Draw Video Frames for each Shot Slot
     videoClips.forEach((clip, i) => {
@@ -214,7 +335,24 @@ export async function exportBoomerangMp4({
       ctx.restore()
     })
 
-    // 4. Draw Stickers (with rotation, scale, and types)
+    // 4. Draw Corner Decorations for Themed Frames
+    if (hasThemedFrame && selectedFrame.decorations) {
+      selectedFrame.decorations.forEach((d) => {
+        const dx = (d.x / 100) * videoWidth
+        const dy = (d.y / 100) * videoHeight
+        ctx.font = '36px sans-serif'
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        ctx.fillText(d.emoji, dx, dy)
+      })
+    }
+
+    // 5. Draw Custom Uploaded Image Frame (if user uploaded a PNG overlay)
+    if (customFrameImg && customFrameImg.naturalWidth > 0) {
+      ctx.drawImage(customFrameImg, 0, 0, videoWidth, videoHeight)
+    }
+
+    // 6. Draw Stickers (with rotation, scale, and types)
     stickers.forEach((stk) => {
       const sx = (stk.x / 100) * videoWidth
       const sy = (stk.y / 100) * videoHeight
@@ -244,27 +382,31 @@ export async function exportBoomerangMp4({
         ctx.textAlign = 'center'
         ctx.textBaseline = 'middle'
         const metrics = ctx.measureText(stk.content)
-        const bgW = metrics.width + 24 * stickerScale
-        const bgH = 34 * stickerScale
+        const bgW = metrics.width + 32 * stickerScale
+        const bgH = 44 * stickerScale
         ctx.fillStyle = stk.badgeBg || '#ff3d96'
         ctx.beginPath()
-        ctx.roundRect(-bgW / 2, -bgH / 2, bgW, bgH, 17 * stickerScale)
+        if (typeof ctx.roundRect === 'function') {
+          ctx.roundRect(-bgW / 2, -bgH / 2, bgW, bgH, 22 * stickerScale)
+        } else {
+          ctx.rect(-bgW / 2, -bgH / 2, bgW, bgH)
+        }
         ctx.fill()
         ctx.fillStyle = stk.textColor || '#ffffff'
         ctx.fillText(stk.content, 0, 0)
       } else if (stk.type === 'tape') {
-        ctx.font = `900 ${18 * stickerScale}px monospace`
+        ctx.font = `900 ${20 * stickerScale}px monospace`
         ctx.textAlign = 'center'
         ctx.textBaseline = 'middle'
         const metrics = ctx.measureText(stk.content)
-        const bgW = metrics.width + 32 * stickerScale
-        const bgH = 30 * stickerScale
+        const bgW = metrics.width + 48 * stickerScale
+        const bgH = 40 * stickerScale
         ctx.fillStyle = stk.bg || '#ffe4e6'
         ctx.fillRect(-bgW / 2, -bgH / 2, bgW, bgH)
         ctx.fillStyle = stk.color || '#f43f5e'
         ctx.fillText(stk.content, 0, 0)
       } else {
-        ctx.font = `${54 * stickerScale}px sans-serif`
+        ctx.font = `${56 * stickerScale}px sans-serif`
         ctx.textAlign = 'center'
         ctx.textBaseline = 'middle'
         ctx.fillText(stk.content || stk.emoji, 0, 0)
@@ -272,7 +414,7 @@ export async function exportBoomerangMp4({
       ctx.restore()
     })
 
-    // 5. Draw Purikura Doodles
+    // 7. Draw Purikura Doodles
     if (doodleStrokes.length > 0) {
       const doodleScale = videoWidth / (isGrid ? 380 : 260)
       doodleStrokes.forEach((stroke) => {
@@ -280,25 +422,25 @@ export async function exportBoomerangMp4({
       })
     }
 
-    // 6. Draw Footer Info & Barcode
+    // 8. Draw Footer Info & Barcode
     const footerY = videoHeight - 40
     ctx.font = `700 ${18}px sans-serif`
     ctx.textAlign = 'left'
-    ctx.fillStyle = frameColor.text
-    ctx.fillText(dateStr, paddingX, footerY - 8)
+    ctx.fillStyle = activeTextColor
+    ctx.fillText(activeFooter, paddingX, footerY - 8)
 
     ctx.font = `600 ${14}px monospace`
     ctx.globalAlpha = 0.6
     ctx.fillText('SEOUL • TOKYO • SAIGON', paddingX, footerY + 16)
     ctx.globalAlpha = 1.0
 
-    // 7. Create VideoFrame & Send to Encoder
+    // 9. Create VideoFrame & Send to Encoder
     const timestampMicros = Math.round(k * (1_000_000 / fps))
     const videoFrame = new VideoFrame(canvas, { timestamp: timestampMicros })
     videoEncoder.encode(videoFrame, { keyFrame: k % (fps * 2) === 0 })
     videoFrame.close()
 
-    // 8. Backpressure protection: If encoder queue is full, yield to CPU/GPU
+    // 10. Backpressure protection: If encoder queue is full, yield to CPU/GPU
     if (videoEncoder.encodeQueueSize > 5) {
       await new Promise((resolve) => setTimeout(resolve, 8))
     }

@@ -11,9 +11,12 @@ import {
   Type,
   ChevronDown,
   ChevronUp,
+  Image as ImageIcon,
+  Upload,
 } from 'lucide-react'
 import { FILTERS, FRAME_COLORS } from '../utils/filters'
 import { COLLAB_FRAMES } from '../utils/collabFrames'
+import { PRESET_FRAMES } from '../utils/frameTemplates'
 import { useLanguage, LanguageSelector } from '../i18n/LanguageContext'
 
 export default function StyleSelectScreen({
@@ -29,6 +32,9 @@ export default function StyleSelectScreen({
   setCountdownDuration,
   customText,
   setCustomText,
+  selectedFrame,
+  onSelectFrame,
+  onOpenFrameModal,
   onBack,
   onContinue,
 }) {
@@ -60,6 +66,9 @@ export default function StyleSelectScreen({
     },
   ]
 
+  // Top trending frame quick picks
+  const quickPickFrames = PRESET_FRAMES.slice(0, 8)
+
   return (
     <div className="min-h-screen bg-[#FFFDF9] text-[#29252C] flex flex-col justify-between">
       {/* Top Header */}
@@ -88,12 +97,109 @@ export default function StyleSelectScreen({
 
       {/* Main Options Content */}
       <main className="max-w-5xl w-full mx-auto px-4 py-6 sm:py-8 space-y-8 flex-1 pb-28">
-        {/* ================= 1. LAYOUT SELECTION ================= */}
+        {/* ================= 1. THEMED & CUSTOM FRAMES (K-PHOTOBOOTH) ================= */}
         <section className="space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-sm sm:text-base font-black text-[#29252C] flex items-center gap-2">
               <span className="w-6 h-6 rounded-lg bg-pink-100 text-[#FF3D96] flex items-center justify-center text-xs">
                 1
+              </span>
+              <span>Khung Hỗ Trợ Chụp & Thần Tượng</span>
+            </h3>
+            <button
+              onClick={onOpenFrameModal}
+              className="text-xs font-bold text-[#FF3D96] hover:underline flex items-center gap-1 cursor-pointer"
+            >
+              <span>Xem tất cả khung</span>
+              <span>→</span>
+            </button>
+          </div>
+
+          {/* Active Frame Showcase Banner */}
+          <div className="bg-gradient-to-r from-pink-500/10 via-purple-500/10 to-pink-500/10 border-2 border-pink-200/80 rounded-3xl p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3.5">
+              {/* Miniature */}
+              <div
+                style={{
+                  background: selectedFrame?.bg || '#ffffff',
+                  borderColor: selectedFrame?.border || '#fbcfe8',
+                  color: selectedFrame?.text || '#29252c',
+                }}
+                className="w-14 h-24 rounded-xl border flex flex-col justify-between p-1 shadow-sm shrink-0 overflow-hidden relative"
+              >
+                {selectedFrame?.type === 'image' ? (
+                  <img
+                    src={selectedFrame.imageUrl}
+                    alt={selectedFrame.name}
+                    className="w-full h-full object-contain"
+                  />
+                ) : (
+                  <>
+                    <span className="text-[5px] font-black uppercase text-center truncate">
+                      {selectedFrame?.headerTitle || 'SNUGGIE'}
+                    </span>
+                    <div className="flex flex-col gap-0.5 justify-around flex-1 py-0.5">
+                      {[0, 1, 2, 3].map((n) => (
+                        <div key={n} className="w-full h-3 bg-black/10 rounded-xs" />
+                      ))}
+                    </div>
+                    <span className="text-[4px] text-center opacity-60">2026</span>
+                  </>
+                )}
+              </div>
+
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-[#FF3D96] text-white">
+                    {selectedFrame?.badge || 'Đang Chọn'}
+                  </span>
+                  <span className="text-xs font-black text-[#29252C]">
+                    {selectedFrame?.name || 'Mặc định (Clean Minimal)'}
+                  </span>
+                </div>
+                <p className="text-[11px] text-[#766F7B] mt-1 max-w-md">
+                  Căn góc chụp trực tiếp trong camera với khung BTS, Born Pink, Sanrio, Anime hoặc tải ảnh PNG tách viền từ điện thoại.
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={onOpenFrameModal}
+              className="w-full sm:w-auto px-5 py-3 rounded-2xl bg-gradient-to-r from-[#FF3D96] to-[#FF6BA8] text-white font-black text-xs shadow-md shadow-pink-500/20 hover:scale-102 transition active:scale-95 flex items-center justify-center gap-2 cursor-pointer shrink-0"
+            >
+              <ImageIcon size={16} />
+              <span>Đổi Khung / Tải Lên</span>
+            </button>
+          </div>
+
+          {/* Quick Choice Chips */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none pt-1">
+            {quickPickFrames.map((f) => {
+              const isSelected = selectedFrame?.id === f.id
+              return (
+                <button
+                  key={f.id}
+                  onClick={() => onSelectFrame && onSelectFrame(f)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap shrink-0 transition flex items-center gap-1.5 border cursor-pointer ${
+                    isSelected
+                      ? 'bg-[#FF3D96] text-white border-[#FF3D96] shadow-sm'
+                      : 'bg-white border-pink-200 text-[#29252C] hover:border-pink-300'
+                  }`}
+                >
+                  <span>{f.decorations?.[0]?.emoji || '✨'}</span>
+                  <span>{f.name}</span>
+                </button>
+              )
+            })}
+          </div>
+        </section>
+
+        {/* ================= 2. LAYOUT SELECTION ================= */}
+        <section className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm sm:text-base font-black text-[#29252C] flex items-center gap-2">
+              <span className="w-6 h-6 rounded-lg bg-pink-100 text-[#FF3D96] flex items-center justify-center text-xs">
+                2
               </span>
               <span>{t('layout_title')}</span>
             </h3>
@@ -153,11 +259,11 @@ export default function StyleSelectScreen({
           </div>
         </section>
 
-        {/* ================= 2. FILTER SELECTION ================= */}
+        {/* ================= 3. FILTER SELECTION ================= */}
         <section className="space-y-3">
           <h3 className="text-sm sm:text-base font-black text-[#29252C] flex items-center gap-2">
             <span className="w-6 h-6 rounded-lg bg-pink-100 text-[#FF3D96] flex items-center justify-center text-xs">
-              2
+              3
             </span>
             <span>{t('filter_title')}</span>
           </h3>
@@ -201,12 +307,12 @@ export default function StyleSelectScreen({
           </div>
         </section>
 
-        {/* ================= 3. FRAME COLOR SELECTION ================= */}
+        {/* ================= 4. FRAME COLOR SELECTION ================= */}
         <section className="space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-sm sm:text-base font-black text-[#29252C] flex items-center gap-2">
               <span className="w-6 h-6 rounded-lg bg-pink-100 text-[#FF3D96] flex items-center justify-center text-xs">
-                3
+                4
               </span>
               <span>{t('frame_color_title')}</span>
             </h3>
@@ -243,11 +349,11 @@ export default function StyleSelectScreen({
           </div>
         </section>
 
-        {/* ================= 4. COLLAB CONCEPT FRAMES ================= */}
+        {/* ================= 5. COLLAB CONCEPT FRAMES ================= */}
         <section className="space-y-3">
           <h3 className="text-sm sm:text-base font-black text-[#29252C] flex items-center gap-2">
             <span className="w-6 h-6 rounded-lg bg-pink-100 text-[#FF3D96] flex items-center justify-center text-xs">
-              4
+              5
             </span>
             <span>{t('collab_title')}</span>
           </h3>
@@ -279,7 +385,7 @@ export default function StyleSelectScreen({
           </div>
         </section>
 
-        {/* ================= 5. MORE OPTIONS (COLLAPSIBLE) ================= */}
+        {/* ================= 6. MORE OPTIONS (COLLAPSIBLE) ================= */}
         <section className="bg-white rounded-3xl border border-pink-100 p-4 shadow-xs">
           <button
             onClick={() => setShowMoreOptions(!showMoreOptions)}

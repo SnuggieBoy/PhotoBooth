@@ -68,6 +68,8 @@ export default function DecorateScreen({
   setDoodleSize,
   sparkleEmoji,
   setSparkleEmoji,
+  selectedFrame,
+  onOpenFrameModal,
   onBackToReview,
   onFinishPhoto,
 }) {
@@ -210,6 +212,7 @@ export default function DecorateScreen({
               doodleSize={doodleSize}
               sparkleEmoji={sparkleEmoji}
               isDoodleMode={activeTab === 'doodle'}
+              selectedFrame={selectedFrame}
             />
             <div className="mt-3 bg-pink-50 border border-pink-100 rounded-full px-4 py-1.5 text-[11px] text-[#FF3D96] font-bold text-center flex items-center gap-1.5 shadow-xs">
               <span>💡</span>
@@ -579,6 +582,27 @@ export default function DecorateScreen({
             {/* ================= TAB 3: PHOTO FILTERS & FRAME STYLES ================= */}
             {activeTab === 'style' && (
               <div className="space-y-4 animate-fade-in bg-[#FFF7EF]/50 p-4 rounded-2xl border border-pink-100">
+                {/* 0. Themed & Custom Frame Selector */}
+                {onOpenFrameModal && (
+                  <div className="bg-white p-3 rounded-xl border border-pink-200 flex items-center justify-between gap-3 shadow-xs">
+                    <div>
+                      <p className="text-xs font-black text-[#29252C] flex items-center gap-1.5">
+                        <ImageIcon size={14} className="text-[#FF3D96]" />
+                        <span>Khung: {selectedFrame?.name || 'Mặc định'}</span>
+                      </p>
+                      <p className="text-[10px] text-[#766F7B] mt-0.5">
+                        Đổi sang khung Idol K-Pop, Cartoon, Y2K hoặc tải ảnh PNG từ máy
+                      </p>
+                    </div>
+                    <button
+                      onClick={onOpenFrameModal}
+                      className="px-3 py-1.5 rounded-xl bg-pink-100 hover:bg-pink-200 text-[#FF3D96] text-xs font-black transition cursor-pointer shrink-0"
+                    >
+                      Đổi Khung
+                    </button>
+                  </div>
+                )}
+
                 {/* 1. Live Filter Selection */}
                 <div className="space-y-2">
                   <span className="text-xs font-black text-[#29252C] flex items-center gap-1.5">

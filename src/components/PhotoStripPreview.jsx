@@ -26,6 +26,8 @@ export default function PhotoStripPreview({
   doodleSize,
   sparkleEmoji,
   isDoodleMode = false,
+  // Themed & Custom Frame Overlay
+  selectedFrame,
 }) {
   const { t, language } = useLanguage()
   const [draggingStickerId, setDraggingStickerId] = useState(null)
@@ -35,6 +37,18 @@ export default function PhotoStripPreview({
     language === 'vi' ? 'vi-VN' : language === 'ko' ? 'ko-KR' : language === 'ja' ? 'ja-JP' : 'en-US',
     { day: '2-digit', month: '2-digit', year: 'numeric' }
   )
+
+  // Resolve styling based on selected Themed/Custom frame
+  const isCustomFrame = selectedFrame?.type === 'image' && selectedFrame?.imageUrl
+  const hasThemedFrame = selectedFrame && selectedFrame.id !== 'none'
+
+  const activeBg = hasThemedFrame ? (selectedFrame.bg || frameColor.bg) : frameColor.bg
+  const activeTextColor = hasThemedFrame && selectedFrame.text ? selectedFrame.text : frameColor.text
+  const activeBorder = hasThemedFrame && selectedFrame.border ? selectedFrame.border : frameColor.border
+  const activeHeader = hasThemedFrame && selectedFrame.headerTitle ? selectedFrame.headerTitle : customText
+  const activeFooter = hasThemedFrame && selectedFrame.footerText ? selectedFrame.footerText : formattedDate
+  const activePhotoBorder = hasThemedFrame ? selectedFrame.photoBorder : undefined
+  const decorations = hasThemedFrame ? selectedFrame.decorations : null
 
   // Global PointerMove and PointerUp handlers for buttery smooth dragging
   useEffect(() => {
@@ -114,16 +128,16 @@ export default function PhotoStripPreview({
         id="printable-photo-strip"
         onClick={() => !isDoodleMode && onSelectSticker && onSelectSticker(null)}
         style={{
-          backgroundColor: frameColor.bg,
-          color: frameColor.text,
-          borderColor: frameColor.border,
+          background: activeBg,
+          color: activeTextColor,
+          borderColor: activeBorder,
         }}
         className={`relative transition-all duration-300 shadow-2xl p-4 sm:p-5 rounded-3xl border flex flex-col items-center select-none overflow-hidden touch-none ${
           layout === 'grid-4' ? 'w-[320px] sm:w-[380px]' : 'w-[230px] sm:w-[260px]'
         }`}
       >
         {/* Optional Texture / Pattern Overlay */}
-        {framePattern && framePattern.css && (
+        {!hasThemedFrame && framePattern && framePattern.css && (
           <div
             style={{
               backgroundImage: framePattern.css,
@@ -134,7 +148,7 @@ export default function PhotoStripPreview({
         )}
 
         {/* Film Negative Sprocket Holes (If film style selected) */}
-        {frameColor.isFilm && (
+        {!hasThemedFrame && frameColor.isFilm && (
           <div className="absolute top-2 bottom-2 left-1.5 flex flex-col justify-between pointer-events-none opacity-40 z-10">
             {Array.from({ length: 14 }).map((_, i) => (
               <span key={i} className="w-2 h-3.5 bg-neutral-800 rounded-xs mb-1" />
@@ -142,14 +156,42 @@ export default function PhotoStripPreview({
           </div>
         )}
 
+        {/* Corner Decorations for Themed Frames */}
+        {decorations &&
+          decorations.map((d, i) => (
+            <span
+              key={i}
+              style={{
+                position: 'absolute',
+                left: `${d.x}%`,
+                top: `${d.y}%`,
+                transform: 'translate(-50%, -50%)',
+              }}
+              className="pointer-events-none text-xl sm:text-2xl z-10 select-none filter drop-shadow-sm"
+            >
+              {d.emoji}
+            </span>
+          ))}
+
+        {/* Custom Uploaded Image Frame (e.g. Transparent PNG overlay) */}
+        {isCustomFrame && (
+          <div className="absolute inset-0 pointer-events-none z-15 flex items-center justify-center overflow-hidden">
+            <img
+              src={selectedFrame.imageUrl}
+              alt="Custom Frame"
+              className="w-full h-full object-fill select-none"
+            />
+          </div>
+        )}
+
         {/* Top Header / Logo */}
         <div className="w-full text-center mb-3 pointer-events-none relative z-10">
-          <div className="flex items-center justify-center gap-1.5">
-            <Sparkles size={13} className="text-[#FF3D96]" />
-            <h4 className="text-[12px] font-black uppercase tracking-widest leading-none">
-              {customText}
+          <div className="flex items-center justify-center gap-1.5 px-6">
+            <Sparkles size={13} className="text-[#FF3D96] shrink-0" />
+            <h4 className="text-[12px] font-black uppercase tracking-widest leading-none truncate">
+              {activeHeader}
             </h4>
-            <Sparkles size={13} className="text-[#FF3D96]" />
+            <Sparkles size={13} className="text-[#FF3D96] shrink-0" />
           </div>
         </div>
 
@@ -162,7 +204,10 @@ export default function PhotoStripPreview({
           {photos.map((photoUrl, idx) => (
             <div
               key={idx}
-              style={{ borderRadius: photoRadius }}
+              style={{
+                borderRadius: photoRadius,
+                border: activePhotoBorder || undefined,
+              }}
               className="relative aspect-[4/3] bg-neutral-100 overflow-hidden shadow-xs group"
             >
               <img
@@ -248,33 +293,33 @@ export default function PhotoStripPreview({
                   <button
                     onClick={(e) => handleRotateSticker(e, stk, 15)}
                     className="w-6 h-6 rounded-full bg-pink-50 hover:bg-pink-100 text-[#FF3D96] flex items-center justify-center transition cursor-pointer"
-                    title="Xoay sticker"
+                    title="Xoay"
                   >
-                    <RotateCw size={11} />
+                    <RotateCw size={12} />
                   </button>
                   <button
                     onClick={(e) => handleScaleSticker(e, stk, 0.15)}
                     className="w-6 h-6 rounded-full bg-pink-50 hover:bg-pink-100 text-[#FF3D96] flex items-center justify-center transition cursor-pointer"
                     title="Phóng to"
                   >
-                    <ZoomIn size={11} />
+                    <ZoomIn size={12} />
                   </button>
                   <button
                     onClick={(e) => handleScaleSticker(e, stk, -0.15)}
                     className="w-6 h-6 rounded-full bg-pink-50 hover:bg-pink-100 text-[#FF3D96] flex items-center justify-center transition cursor-pointer"
                     title="Thu nhỏ"
                   >
-                    <ZoomOut size={11} />
+                    <ZoomOut size={12} />
                   </button>
                   <button
                     onClick={(e) => {
                       e.stopPropagation()
-                      onRemoveSticker && onRemoveSticker(stk.id)
+                      onRemoveSticker(stk.id)
                     }}
-                    className="w-6 h-6 rounded-full bg-rose-50 hover:bg-rose-100 text-rose-500 flex items-center justify-center transition cursor-pointer"
+                    className="w-6 h-6 rounded-full bg-red-50 hover:bg-red-100 text-red-500 flex items-center justify-center transition cursor-pointer"
                     title="Xóa sticker"
                   >
-                    <Trash2 size={11} />
+                    <Trash2 size={12} />
                   </button>
                 </div>
               )}
@@ -297,7 +342,7 @@ export default function PhotoStripPreview({
         {/* Bottom Authentic K-Photobooth Footer (Date + Barcode + Slogan) */}
         <div className="w-full mt-4 pt-2.5 border-t border-black/10 flex items-end justify-between text-[10px] pointer-events-none relative z-10">
           <div>
-            <p className="font-extrabold tracking-wider">{formattedDate}</p>
+            <p className="font-extrabold tracking-wider">{activeFooter}</p>
             <p className="opacity-60 text-[8px] uppercase tracking-widest font-mono">
               {t('strip_city_slogan')}
             </p>
