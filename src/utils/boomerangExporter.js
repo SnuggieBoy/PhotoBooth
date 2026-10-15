@@ -149,6 +149,27 @@ export async function exportBoomerangMp4({
     year: 'numeric',
   })
 
+  // Preload custom image stickers once before the 96-frame loop
+  const imageStickerMap = new Map()
+  const customImageStickers = stickers.filter((s) => s.type === 'image' && s.content)
+  if (customImageStickers.length > 0) {
+    await Promise.all(
+      customImageStickers.map(
+        (stk) =>
+          new Promise((resolve) => {
+            const img = new Image()
+            img.crossOrigin = 'anonymous'
+            img.onload = () => {
+              imageStickerMap.set(stk.id, img)
+              resolve()
+            }
+            img.onerror = () => resolve()
+            img.src = stk.content
+          })
+      )
+    )
+  }
+
   // Encode 96 frames in a ping-pong loop
   for (let k = 0; k < totalFrames; k++) {
     if (encodeError) throw encodeError
@@ -204,7 +225,21 @@ export async function exportBoomerangMp4({
       ctx.translate(sx, sy)
       ctx.rotate(rotation)
 
-      if (stk.type === 'text') {
+      if (stk.type === 'image') {
+        const imgEl = imageStickerMap.get(stk.id)
+        if (imgEl && imgEl.naturalWidth > 0) {
+          const baseSize = 120 * stickerScale
+          const aspect = imgEl.naturalWidth / imgEl.naturalHeight
+          let w = baseSize
+          let h = baseSize
+          if (aspect >= 1) {
+            h = baseSize / aspect
+          } else {
+            w = baseSize * aspect
+          }
+          ctx.drawImage(imgEl, -w / 2, -h / 2, w, h)
+        }
+      } else if (stk.type === 'text') {
         ctx.font = `900 ${22 * stickerScale}px sans-serif`
         ctx.textAlign = 'center'
         ctx.textBaseline = 'middle'

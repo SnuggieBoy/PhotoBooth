@@ -208,7 +208,7 @@ export default function CameraView({
   }
 
   return (
-    <div className="relative w-full aspect-[4/3] sm:aspect-[16/10] max-h-[72vh] rounded-[28px] sm:rounded-[36px] overflow-hidden bg-neutral-900 border-4 border-white shadow-2xl shadow-pink-500/10 flex items-center justify-center select-none ring-1 ring-pink-100">
+    <div className="relative w-full aspect-[3/4] sm:aspect-[16/10] max-h-[78vh] rounded-[28px] sm:rounded-[38px] overflow-hidden bg-neutral-900 border-4 border-white shadow-2xl shadow-pink-500/10 flex items-center justify-center select-none ring-1 ring-pink-100">
       {/* Flash effect overlay */}
       {isFlashing && (
         <div className="absolute inset-0 bg-white z-50 animate-flash pointer-events-none" />

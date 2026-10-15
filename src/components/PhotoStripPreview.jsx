@@ -228,6 +228,17 @@ export default function PhotoStripPreview({
                 </div>
               )}
 
+              {stk.type === 'image' && (
+                <div className="w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center p-0.5 filter drop-shadow-md">
+                  <img
+                    src={stk.content}
+                    alt="Custom sticker"
+                    className="max-w-full max-h-full object-contain pointer-events-none select-none"
+                    draggable={false}
+                  />
+                </div>
+              )}
+
               {/* Controls UI overlay for Selected Sticker */}
               {isSelected && !isDoodleMode && (
                 <div

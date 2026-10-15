@@ -252,6 +252,27 @@ export default function App() {
       )
     )
 
+    // Preload custom image stickers if any
+    const imageStickerMap = new Map()
+    const customImageStickers = placedStickers.filter((s) => s.type === 'image' && s.content)
+    if (customImageStickers.length > 0) {
+      await Promise.all(
+        customImageStickers.map(
+          (stk) =>
+            new Promise((resolve) => {
+              const img = new Image()
+              img.crossOrigin = 'anonymous'
+              img.onload = () => {
+                imageStickerMap.set(stk.id, img)
+                resolve()
+              }
+              img.onerror = () => resolve()
+              img.src = stk.content
+            })
+        )
+      )
+    }
+
     loadedImages.forEach((img, i) => {
       let x = paddingX
       let y = startY + i * (photoHeight + gap)
@@ -291,7 +312,21 @@ export default function App() {
       ctx.translate(sx, sy)
       ctx.rotate(rotation)
 
-      if (stk.type === 'text') {
+      if (stk.type === 'image') {
+        const imgEl = imageStickerMap.get(stk.id)
+        if (imgEl && imgEl.naturalWidth > 0) {
+          const baseSize = 64 * stickerScale
+          const aspect = imgEl.naturalWidth / imgEl.naturalHeight
+          let w = baseSize
+          let h = baseSize
+          if (aspect >= 1) {
+            h = baseSize / aspect
+          } else {
+            w = baseSize * aspect
+          }
+          ctx.drawImage(imgEl, -w / 2, -h / 2, w, h)
+        }
+      } else if (stk.type === 'text') {
         ctx.font = `900 ${11 * stickerScale}px sans-serif`
         ctx.textAlign = 'center'
         ctx.textBaseline = 'middle'
@@ -503,12 +538,12 @@ export default function App() {
 
       {/* SCREEN 03: CAMERA CAPTURE SESSION */}
       {step === 'camera' && (
-        <div className="min-h-screen bg-[#FFFDF9] flex flex-col justify-between p-4 sm:p-6">
-          <div className="max-w-3xl w-full mx-auto space-y-4 my-auto">
+        <div className="min-h-[100dvh] bg-[#FFFDF9] flex flex-col justify-between px-2 py-1.5 sm:p-6 safe-top safe-bottom">
+          <div className="max-w-3xl w-full mx-auto space-y-2.5 sm:space-y-4 my-auto">
             <div className="flex items-center justify-between px-2">
               <button
                 onClick={() => setStep(retakeTargetIndex !== null ? 'review' : 'style')}
-                className="text-xs font-bold text-[#766F7B] hover:text-[#FF3D96] flex items-center gap-1 cursor-pointer"
+                className="text-xs font-bold text-[#766F7B] hover:text-[#FF3D96] flex items-center gap-1 cursor-pointer transition active:scale-95"
               >
                 ← {retakeTargetIndex !== null ? 'Quay lại xem ảnh' : 'Chọn lại phong cách'}
               </button>
@@ -537,11 +572,11 @@ export default function App() {
 
             {/* Thumbnails of captured shots */}
             {photos.length > 0 && retakeTargetIndex === null && (
-              <div className="flex items-center justify-center gap-2 pt-2">
+              <div className="flex items-center justify-center gap-2 pt-1 sm:pt-2">
                 {Array.from({ length: targetShotsCount }).map((_, i) => (
                   <div
                     key={i}
-                    className="w-16 h-12 rounded-xl bg-white border border-pink-200 overflow-hidden shadow-xs"
+                    className="w-12 h-9 sm:w-16 sm:h-12 rounded-xl bg-white border border-pink-200 overflow-hidden shadow-xs"
                   >
                     {photos[i] ? (
                       <img

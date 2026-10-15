@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import {
   Sparkles,
   ArrowLeft,
@@ -15,6 +15,8 @@ import {
   Sliders,
   Maximize2,
   Layers,
+  Upload,
+  Image as ImageIcon,
 } from 'lucide-react'
 import PhotoStripPreview from './PhotoStripPreview'
 import {
@@ -74,12 +76,65 @@ export default function DecorateScreen({
   // Main active deck tab: 'stickers' | 'doodle' | 'style'
   const [activeTab, setActiveTab] = useState('stickers')
 
-  // Sub-category for sticker drawer: 'emojis' | 'hangul' | 'words' | 'tape' | 'custom'
+  // Sub-category for sticker drawer: 'emojis' | 'hangul' | 'words' | 'tape' | 'custom' | 'upload'
   const [stickerCategory, setStickerCategory] = useState('emojis')
 
   // Custom text badge input
   const [customBadgeText, setCustomBadgeText] = useState('')
   const [customBadgeColor, setCustomBadgeColor] = useState('#ff3d96')
+
+  // Hidden File input ref for device photo/sticker picker
+  const fileInputRef = useRef(null)
+
+  // Handle image upload from device
+  const handleDeviceImageUpload = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result
+      if (dataUrl) {
+        onAddSticker({
+          type: 'image',
+          content: dataUrl,
+          scale: 1.2,
+          rotation: 0,
+        })
+      }
+    }
+    reader.readAsDataURL(file)
+    e.target.value = ''
+  }
+
+  // Support iOS & desktop clipboard paste for stickers (tap and hold sticker copy in iOS Photos)
+  useEffect(() => {
+    const handlePaste = (e) => {
+      const items = e.clipboardData?.items
+      if (!items) return
+      for (const item of items) {
+        if (item.type.indexOf('image') !== -1) {
+          const blob = item.getAsFile()
+          if (!blob) continue
+          const reader = new FileReader()
+          reader.onload = (event) => {
+            const dataUrl = event.target?.result
+            if (dataUrl) {
+              onAddSticker({
+                type: 'image',
+                content: dataUrl,
+                scale: 1.2,
+                rotation: 0,
+              })
+            }
+          }
+          reader.readAsDataURL(blob)
+          break
+        }
+      }
+    }
+    window.addEventListener('paste', handlePaste)
+    return () => window.removeEventListener('paste', handlePaste)
+  }, [onAddSticker])
 
   const badgeColorOptions = [
     { label: 'Hot Pink', color: '#ff3d96' },
@@ -233,6 +288,7 @@ export default function DecorateScreen({
                     { id: 'words', label: STICKER_PACKS.words.title },
                     { id: 'tape', label: STICKER_PACKS.tape.title },
                     { id: 'custom', label: '✍️ Tự Viết Chữ' },
+                    { id: 'upload', label: '📸 Tải Từ Máy' },
                   ].map((cat) => (
                     <button
                       key={cat.id}
@@ -354,6 +410,39 @@ export default function DecorateScreen({
                       </div>
                     </div>
                   </form>
+                )}
+
+                {/* Subcategory 6: Import Custom Sticker from Device */}
+                {stickerCategory === 'upload' && (
+                  <div className="bg-[#FFF7EF] p-5 rounded-3xl border-2 border-dashed border-pink-300 text-center space-y-3 animate-fade-in">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleDeviceImageUpload}
+                    />
+                    <div className="w-14 h-14 rounded-2xl bg-white text-[#FF3D96] border border-pink-100 flex items-center justify-center mx-auto shadow-sm">
+                      <ImageIcon size={28} />
+                    </div>
+                    <div>
+                      <h4 className="font-black text-sm text-[#29252C]">Tải Nhãn Dán / Ảnh Từ Điện Thoại</h4>
+                      <p className="text-[11px] text-[#766F7B] mt-1 max-w-sm mx-auto leading-relaxed">
+                        Hỗ trợ ảnh PNG tách nền (sticker iPhone / Android), meme, hoặc ảnh từ thư viện. Bạn có thể kéo thả, phóng to và xoay tự do!
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="px-6 py-3 rounded-full bg-gradient-to-r from-[#FF3D96] to-[#FF6BA8] text-white text-xs font-black shadow-md shadow-pink-500/20 hover:shadow-lg transition active:scale-95 cursor-pointer inline-flex items-center gap-2"
+                    >
+                      <Upload size={15} />
+                      <span>Chọn ảnh từ thiết bị</span>
+                    </button>
+                    <p className="text-[10px] text-[#766F7B] italic">
+                      ✨ Mẹo iOS: Bạn có thể nhấn giữ bóc sticker từ ảnh trong app Photos rồi dán (Paste) trực tiếp vào đây!
+                    </p>
+                  </div>
                 )}
               </div>
             )}
