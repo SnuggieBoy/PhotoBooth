@@ -47,12 +47,12 @@ export function LanguageSelector() {
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-neutral-900/80 border border-neutral-800 hover:border-neutral-700 text-xs font-bold text-neutral-200 transition shadow-xs"
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/80 border border-pink-100 hover:border-pink-300 text-xs font-bold text-[#29252C] transition shadow-xs backdrop-blur-sm active:scale-95 cursor-pointer"
         aria-expanded={isOpen}
       >
         <span className="text-sm">{currentLangObj.flag}</span>
-        <span className="hidden sm:inline">{currentLangObj.short}</span>
-        <ChevronDown size={13} className={`text-neutral-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <span className="hidden sm:inline font-bold">{currentLangObj.short}</span>
+        <ChevronDown size={13} className={`text-pink-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {isOpen && (
@@ -61,7 +61,7 @@ export function LanguageSelector() {
             className="fixed inset-0 z-40"
             onClick={() => setIsOpen(false)}
           />
-          <div className="absolute right-0 mt-2 w-36 rounded-2xl bg-neutral-900 border border-neutral-800 shadow-xl py-1.5 z-50 animate-fade-in backdrop-blur-md">
+          <div className="absolute right-0 mt-2 w-40 rounded-2xl bg-white border border-pink-100 shadow-xl shadow-pink-500/10 py-1.5 z-50 backdrop-blur-md animate-fade-in">
             {LANGUAGES.map((lang) => (
               <button
                 key={lang.code}
@@ -69,10 +69,10 @@ export function LanguageSelector() {
                   setLanguage(lang.code)
                   setIsOpen(false)
                 }}
-                className={`w-full text-left px-3.5 py-2 text-xs font-semibold flex items-center justify-between transition ${
+                className={`w-full text-left px-3.5 py-2 text-xs font-medium flex items-center justify-between transition cursor-pointer ${
                   language === lang.code
-                    ? 'bg-pink-500/15 text-pink-400 font-bold'
-                    : 'text-neutral-300 hover:bg-neutral-800'
+                    ? 'bg-pink-50 text-[#FF3D96] font-bold'
+                    : 'text-[#29252C] hover:bg-pink-50/50'
                 }`}
               >
                 <div className="flex items-center gap-2">
@@ -80,7 +80,7 @@ export function LanguageSelector() {
                   <span>{lang.label}</span>
                 </div>
                 {language === lang.code && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-pink-400" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#FF3D96]" />
                 )}
               </button>
             ))}

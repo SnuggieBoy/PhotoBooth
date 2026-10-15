@@ -23,7 +23,9 @@ export default function CameraView({
   currentShotIndex = 0,
   filterCss = 'none',
   countdownDuration = 3,
-  collabFrame = 'none', // 'none' | 'idol-half-heart' | 'cat-ear-headband' | 'y2k-cyber-glitch' | 'film-slate'
+  collabFrame = 'none',
+  isRetakingSingleShot = false,
+  retakeIndex = 0,
 }) {
   const { t } = useLanguage()
   const videoRef = useRef(null)
@@ -35,7 +37,7 @@ export default function CameraView({
   const [isFlashing, setIsFlashing] = useState(false)
   const [hasPermission, setHasPermission] = useState(null)
   const [soundEnabled, setSoundEnabled] = useState(true)
-  const [isUltraWide, setIsUltraWide] = useState(false) // 0.5x lens simulation
+  const [isUltraWide, setIsUltraWide] = useState(false)
 
   // AI Features State
   const [gestureEnabled, setGestureEnabled] = useState(false)
@@ -101,7 +103,7 @@ export default function CameraView({
         } catch {
           // ignore transient frame capture aborts
         }
-      }, 41) // ~24 fps
+      }, 41)
     }
 
     return () => {
@@ -206,23 +208,31 @@ export default function CameraView({
   }
 
   return (
-    <div className="relative w-full aspect-[4/3] sm:aspect-[16/10] max-h-[68vh] rounded-3xl overflow-hidden bg-neutral-900 border-2 border-neutral-800 shadow-2xl flex items-center justify-center select-none">
+    <div className="relative w-full aspect-[4/3] sm:aspect-[16/10] max-h-[72vh] rounded-[28px] sm:rounded-[36px] overflow-hidden bg-neutral-900 border-4 border-white shadow-2xl shadow-pink-500/10 flex items-center justify-center select-none ring-1 ring-pink-100">
       {/* Flash effect overlay */}
       {isFlashing && (
         <div className="absolute inset-0 bg-white z-50 animate-flash pointer-events-none" />
       )}
 
-      {/* Video Stream with optional 0.5x Ultra-Wide Fisheye Simulation */}
+      {/* Retaking single shot banner */}
+      {isRetakingSingleShot && (
+        <div className="absolute top-16 left-1/2 -translate-x-1/2 z-40 bg-[#FF3D96] text-white px-4 py-1.5 rounded-full text-xs font-black shadow-lg shadow-pink-500/40 flex items-center gap-1.5 animate-bounce">
+          <Camera size={14} />
+          <span>{t('retake_notice').replace('{index}', retakeIndex + 1)}</span>
+        </div>
+      )}
+
+      {/* Video Stream */}
       {hasPermission === false ? (
-        <div className="p-8 text-center max-w-md">
-          <Camera className="w-16 h-16 mx-auto mb-4 text-pink-500 opacity-60" />
-          <h3 className="font-bold text-lg mb-2">{t('camera_no_permission')}</h3>
-          <p className="text-sm text-neutral-400 mb-4">
+        <div className="p-8 text-center max-w-md bg-white rounded-3xl m-4 shadow-xl border border-pink-100">
+          <Camera className="w-16 h-16 mx-auto mb-4 text-[#FF3D96] opacity-60" />
+          <h3 className="font-black text-lg mb-2 text-[#29252C]">{t('camera_no_permission')}</h3>
+          <p className="text-xs text-[#766F7B] mb-4">
             {t('camera_no_permission_desc')}
           </p>
           <button
             onClick={() => setFacingMode((f) => (f === 'user' ? 'environment' : 'user'))}
-            className="px-5 py-2.5 rounded-full bg-pink-500 hover:bg-pink-600 font-bold text-sm transition"
+            className="px-6 py-2.5 rounded-full bg-[#FF3D96] hover:bg-[#E62E84] text-white font-black text-xs transition cursor-pointer"
           >
             {t('camera_retry')}
           </button>
@@ -250,7 +260,7 @@ export default function CameraView({
       {collabFrame === 'idol-half-heart' && (
         <div className="absolute inset-0 pointer-events-none flex items-center justify-end pr-6 z-20">
           <div className="flex flex-col items-center animate-pulse">
-            <span className="text-7xl sm:text-8xl select-none filter drop-shadow-[0_0_20px_rgba(244,114,182,0.8)]">
+            <span className="text-7xl sm:text-8xl select-none filter drop-shadow-[0_0_20px_rgba(255,61,150,0.8)]">
               🫶
             </span>
             <span className="text-[11px] font-black uppercase tracking-wider text-pink-300 bg-black/60 px-2.5 py-1 rounded-full mt-2 border border-pink-500/30">
@@ -284,14 +294,14 @@ export default function CameraView({
       {collabFrame === 'film-slate' && (
         <div className="absolute inset-x-0 top-0 h-10 bg-black/80 flex items-center justify-between px-4 text-[10px] font-mono text-neutral-300 pointer-events-none z-20 border-b border-white/20">
           <span>SCENE 01 / TAKE 04</span>
-          <span>DIRECTOR: K-PHOTOBOOTH</span>
+          <span>DIRECTOR: SNUGGIE PHOTOBOOTH</span>
         </div>
       )}
 
       {/* Gesture Recognition Toast Notification */}
       {gestureToast && (
         <div className="absolute top-16 inset-x-0 flex justify-center z-40 pointer-events-none animate-bounce">
-          <div className="bg-pink-500 text-white font-extrabold text-xs px-4 py-2 rounded-full shadow-lg shadow-pink-500/40 flex items-center gap-2">
+          <div className="bg-[#FF3D96] text-white font-black text-xs px-4 py-2 rounded-full shadow-lg shadow-pink-500/40 flex items-center gap-2">
             <Sparkles size={14} />
             <span>{gestureToast}</span>
           </div>
@@ -300,12 +310,12 @@ export default function CameraView({
 
       {/* Countdown Big Overlay */}
       {isCountingDown && (
-        <div className="absolute inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center z-40 pointer-events-none">
+        <div className="absolute inset-0 bg-black/35 backdrop-blur-xs flex items-center justify-center z-40 pointer-events-none">
           <div className="text-center animate-bounce">
-            <span className="text-8xl sm:text-9xl font-black text-pink-400 drop-shadow-[0_0_35px_rgba(244,114,182,0.9)]">
+            <span className="text-8xl sm:text-9xl font-black text-pink-300 drop-shadow-[0_0_35px_rgba(255,61,150,0.95)]">
               {countdown > 0 ? countdown : '📸'}
             </span>
-            <p className="text-white text-lg font-bold tracking-wider mt-4 uppercase">
+            <p className="text-white text-lg font-black tracking-wider mt-4 uppercase drop-shadow-md">
               {countdown > 0 ? t('countdown_prep') : t('countdown_smile')}
             </p>
           </div>
@@ -315,10 +325,12 @@ export default function CameraView({
       {/* Top Controls Overlay */}
       <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-30 pointer-events-auto">
         {/* Shot Counter Pill */}
-        <div className="bg-black/60 backdrop-blur-md border border-white/10 px-3.5 py-1.5 rounded-full flex items-center gap-2 shadow-md">
-          <span className="w-2.5 h-2.5 rounded-full bg-pink-500 animate-pulse" />
-          <span className="text-xs font-bold text-white tracking-wide">
-            {t('shot_indicator')} {currentShotIndex + 1} / {shotsCount}
+        <div className="bg-white/90 backdrop-blur-md border border-pink-100 px-3.5 py-1.5 rounded-full flex items-center gap-2 shadow-md">
+          <span className="w-2.5 h-2.5 rounded-full bg-[#FF3D96] animate-pulse" />
+          <span className="text-xs font-black text-[#29252C] tracking-wide">
+            {isRetakingSingleShot
+              ? `#${retakeIndex + 1}`
+              : `${t('shot_indicator')} ${currentShotIndex + 1} / ${shotsCount}`}
           </span>
         </div>
 
@@ -327,26 +339,26 @@ export default function CameraView({
           {/* Hands-free Gesture Trigger Toggle */}
           <button
             onClick={() => setGestureEnabled(!gestureEnabled)}
-            className={`h-9 px-2.5 rounded-full backdrop-blur-md border flex items-center gap-1.5 text-xs font-black transition active:scale-95 ${
+            className={`h-9 px-3 rounded-full backdrop-blur-md border flex items-center gap-1.5 text-xs font-black transition active:scale-95 cursor-pointer ${
               gestureEnabled
-                ? 'bg-gradient-to-r from-pink-500 to-rose-500 border-pink-400 text-white shadow-md shadow-pink-500/30 ring-2 ring-pink-500/40'
-                : 'bg-black/60 border-white/10 text-white/80 hover:bg-black/80'
+                ? 'bg-gradient-to-r from-[#FF3D96] to-[#FF6BA8] border-[#FF3D96] text-white shadow-md shadow-pink-500/30 ring-2 ring-pink-500/40'
+                : 'bg-white/90 border-pink-100 text-[#29252C] hover:bg-white'
             }`}
             title="Chụp rảnh tay bằng cử chỉ (✌️ Chữ V hoặc 🖐️ Mở bàn tay)"
           >
             <span>✌️</span>
-            <span className="hidden sm:inline">Rảnh tay</span>
+            <span className="hidden sm:inline">Cử chỉ</span>
           </button>
 
           {/* AI Beauty Bojeong Level Button */}
           <button
             onClick={cycleBeautyLevel}
-            className={`h-9 px-2.5 rounded-full backdrop-blur-md border flex items-center gap-1 text-xs font-black transition active:scale-95 ${
+            className={`h-9 px-3 rounded-full backdrop-blur-md border flex items-center gap-1.5 text-xs font-black transition active:scale-95 cursor-pointer ${
               beautyLevel > 0
-                ? 'bg-rose-500/20 border-rose-400/40 text-rose-300'
-                : 'bg-black/60 border-white/10 text-white/60 hover:bg-black/80'
+                ? 'bg-pink-100 border-pink-300 text-[#FF3D96]'
+                : 'bg-white/90 border-pink-100 text-[#766F7B] hover:bg-white'
             }`}
-            title="Cấp độ làm mịn da AI (Bojeong)"
+            title="Làm mịn da AI Bojeong"
           >
             <span>{BEAUTY_LEVELS[beautyLevel].icon}</span>
             <span className="hidden sm:inline">{BEAUTY_LEVELS[beautyLevel].label}</span>
@@ -355,10 +367,10 @@ export default function CameraView({
           {/* 0.5x Ultra Wide Lens Toggle */}
           <button
             onClick={() => setIsUltraWide(!isUltraWide)}
-            className={`h-9 px-2.5 rounded-full backdrop-blur-md border flex items-center gap-1 text-xs font-black transition active:scale-95 ${
+            className={`h-9 px-3 rounded-full backdrop-blur-md border flex items-center gap-1 text-xs font-black transition active:scale-95 cursor-pointer ${
               isUltraWide
-                ? 'bg-amber-400/90 border-amber-300 text-black shadow-md shadow-amber-400/30'
-                : 'bg-black/60 border-white/10 text-white hover:bg-black/80'
+                ? 'bg-amber-400 border-amber-300 text-[#29252C] shadow-md shadow-amber-400/30'
+                : 'bg-white/90 border-pink-100 text-[#29252C] hover:bg-white'
             }`}
             title="Góc siêu rộng 0.5x Ultra-Wide"
           >
@@ -368,7 +380,7 @@ export default function CameraView({
           {/* Sound Toggle */}
           <button
             onClick={() => setSoundEnabled(!soundEnabled)}
-            className="w-9 h-9 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-white flex items-center justify-center hover:bg-black/80 transition active:scale-95"
+            className="w-9 h-9 rounded-full bg-white/90 backdrop-blur-md border border-pink-100 text-[#29252C] flex items-center justify-center hover:bg-white transition active:scale-95 cursor-pointer"
             title={soundEnabled ? t('sound_mute') : t('sound_unmute')}
           >
             {soundEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
@@ -377,7 +389,7 @@ export default function CameraView({
           {/* Camera Flip */}
           <button
             onClick={toggleFacingMode}
-            className="w-9 h-9 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-white flex items-center justify-center hover:bg-black/80 transition active:scale-95"
+            className="w-9 h-9 rounded-full bg-white/90 backdrop-blur-md border border-pink-100 text-[#29252C] flex items-center justify-center hover:bg-white transition active:scale-95 cursor-pointer"
             title={t('flip_camera')}
           >
             <SwitchCamera size={16} />
@@ -385,15 +397,15 @@ export default function CameraView({
         </div>
       </div>
 
-      {/* Bottom Shutter Overlay */}
+      {/* Bottom Shutter Button */}
       <div className="absolute bottom-5 inset-x-0 flex items-center justify-center z-30 pointer-events-auto">
         <button
           disabled={isCountingDown || hasPermission === false}
           onClick={triggerCapture}
-          className="group relative p-1.5 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-md transition active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
+          className="group relative p-2 rounded-full bg-white/30 hover:bg-white/40 backdrop-blur-md transition active:scale-95 disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
         >
-          <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-pink-500 to-rose-400 flex items-center justify-center shadow-[0_0_20px_rgba(244,63,94,0.6)] group-hover:shadow-[0_0_30px_rgba(244,63,94,0.9)] transition-all">
-            <Camera size={26} className="text-white" />
+          <div className="w-16 h-16 sm:w-18 sm:h-18 rounded-full bg-gradient-to-tr from-[#FF3D96] to-[#FF6BA8] flex items-center justify-center shadow-[0_0_25px_rgba(255,61,150,0.7)] group-hover:shadow-[0_0_35px_rgba(255,61,150,0.9)] transition-all">
+            <Camera size={28} className="text-white group-hover:scale-110 transition-transform" />
           </div>
         </button>
       </div>
