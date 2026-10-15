@@ -66,12 +66,19 @@ export async function exportBoomerangMp4({
     throw new Error('Chưa có dữ liệu khung hình camera để tạo video Boomerang.')
   }
 
-  const isGrid = layout === 'grid-4'
+  const isGrid = layout === 'grid-4' || layout === 'grid-6'
   const isDuo = layout === 'strip-2'
+  const isTrio = layout === 'strip-3'
+  const isSix = layout === 'strip-6' || layout === 'grid-6'
 
   // Dimensions aligned to multiples of 16 for optimal H.264 hardware encoding
   const videoWidth = isGrid ? 768 : 528
-  const videoHeight = isGrid ? 1040 : isDuo ? 768 : 1536
+  let videoHeight = 1536
+  if (layout === 'strip-2') videoHeight = 768
+  else if (layout === 'strip-3') videoHeight = 1152
+  else if (layout === 'grid-4') videoHeight = 1040
+  else if (layout === 'grid-6') videoHeight = 1440
+  else if (layout === 'strip-6') videoHeight = 2240
 
   const canvas = document.createElement('canvas')
   canvas.width = videoWidth

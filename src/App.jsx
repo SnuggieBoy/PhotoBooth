@@ -76,7 +76,36 @@ export default function App() {
   const stripRef = useRef(null)
 
   // Target shots needed based on layout
-  const targetShotsCount = layout === 'strip-2' ? 2 : 4
+  const getTargetShotsCount = (selectedLayout) => {
+    switch (selectedLayout) {
+      case 'strip-2':
+        return 2
+      case 'strip-3':
+        return 3
+      case 'strip-6':
+      case 'grid-6':
+        return 6
+      case 'strip-4':
+      case 'grid-4':
+      default:
+        return 4
+    }
+  }
+
+  const targetShotsCount = getTargetShotsCount(layout)
+
+  // Refs to guarantee progressive photo capture never gets trapped in closures
+  const photosRef = useRef([])
+  photosRef.current = photos
+
+  const videoClipsRef = useRef([])
+  videoClipsRef.current = videoClips
+
+  const targetShotsCountRef = useRef(targetShotsCount)
+  targetShotsCountRef.current = targetShotsCount
+
+  const retakeTargetIndexRef = useRef(retakeTargetIndex)
+  retakeTargetIndexRef.current = retakeTargetIndex
 
   // Custom Frame Handlers
   const handleAddCustomFrame = (newFrame) => {
@@ -97,11 +126,13 @@ export default function App() {
   // Handle Photo Taken from CameraView
   const handlePhotoTaken = (dataUrl, capturedFrames = []) => {
     // Case A: User was retaking a specific single photo from Review screen
-    if (retakeTargetIndex !== null) {
-      const updatedPhotos = [...photos]
-      const updatedClips = [...videoClips]
-      updatedPhotos[retakeTargetIndex] = dataUrl
-      updatedClips[retakeTargetIndex] = capturedFrames
+    if (retakeTargetIndexRef.current !== null) {
+      const updatedPhotos = [...photosRef.current]
+      const updatedClips = [...videoClipsRef.current]
+      updatedPhotos[retakeTargetIndexRef.current] = dataUrl
+      updatedClips[retakeTargetIndexRef.current] = capturedFrames
+      photosRef.current = updatedPhotos
+      videoClipsRef.current = updatedClips
       setPhotos(updatedPhotos)
       setVideoClips(updatedClips)
       setRetakeTargetIndex(null)
@@ -109,13 +140,17 @@ export default function App() {
       return
     }
 
-    // Case B: Regular progressive capture
-    const updatedPhotos = [...photos, dataUrl]
+    // Case B: Regular progressive capture (Pose 1 -> Pose 2 -> Pose 3 -> Pose 4...)
+    const updatedPhotos = [...photosRef.current, dataUrl]
+    const updatedClips = [...videoClipsRef.current, capturedFrames]
+    photosRef.current = updatedPhotos
+    videoClipsRef.current = updatedClips
     setPhotos(updatedPhotos)
-    setVideoClips((prev) => [...prev, capturedFrames])
+    setVideoClips(updatedClips)
 
-    if (updatedPhotos.length < targetShotsCount) {
-      setCurrentShotIndex(updatedPhotos.length)
+    const nextIndex = updatedPhotos.length
+    if (nextIndex < targetShotsCountRef.current) {
+      setCurrentShotIndex(nextIndex)
     } else {
       setStep('review')
     }
@@ -123,6 +158,8 @@ export default function App() {
 
   // Start fresh capture session from Style screen
   const handleStartCapture = () => {
+    photosRef.current = []
+    videoClipsRef.current = []
     setPhotos([])
     setVideoClips([])
     setCurrentShotIndex(0)

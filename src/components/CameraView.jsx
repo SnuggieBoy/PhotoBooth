@@ -162,6 +162,13 @@ export default function CameraView({
   isRetakingSingleShotRef.current = isRetakingSingleShot
   const soundEnabledRef = useRef(soundEnabled)
   soundEnabledRef.current = soundEnabled
+  const onPhotoTakenRef = useRef(onPhotoTaken)
+  onPhotoTakenRef.current = onPhotoTaken
+
+  const shotIndexRef = useRef(currentShotIndex)
+  useEffect(() => {
+    shotIndexRef.current = currentShotIndex
+  }, [currentShotIndex])
 
   // Cleanup all timers on unmount
   useEffect(() => {
@@ -338,9 +345,13 @@ export default function CameraView({
         // Reset countdown cleanly so it NEVER gets stuck at 0
         setCountdown(countdownDurationRef.current)
 
+        const currentPose = shotIndexRef.current
+        const nextPose = currentPose + 1
+        shotIndexRef.current = nextPose
+
         const isLastShot =
           isRetakingSingleShotRef.current ||
-          currentShotIndexRef.current + 1 >= shotsCountRef.current
+          nextPose >= shotsCountRef.current
 
         if (isLastShot) {
           setShootingState('idle')
@@ -353,7 +364,9 @@ export default function CameraView({
         }
 
         try {
-          onPhotoTaken(dataUrl, capturedVideoFrames)
+          if (onPhotoTakenRef.current) {
+            onPhotoTakenRef.current(dataUrl, capturedVideoFrames)
+          }
         } catch (callbackErr) {
           console.error('onPhotoTaken error:', callbackErr)
         }

@@ -133,7 +133,7 @@ export default function PhotoStripPreview({
           borderColor: activeBorder,
         }}
         className={`relative transition-all duration-300 shadow-2xl p-4 sm:p-5 rounded-3xl border flex flex-col items-center select-none overflow-hidden touch-none ${
-          layout === 'grid-4' ? 'w-[320px] sm:w-[380px]' : 'w-[230px] sm:w-[260px]'
+          layout === 'grid-4' || layout === 'grid-6' ? 'w-[320px] sm:w-[380px]' : 'w-[230px] sm:w-[260px]'
         }`}
       >
         {/* Optional Texture / Pattern Overlay */}
@@ -198,7 +198,7 @@ export default function PhotoStripPreview({
         {/* Photos Layout Container */}
         <div
           className={`w-full gap-2.5 relative z-10 pointer-events-none ${
-            layout === 'grid-4' ? 'grid grid-cols-2' : 'flex flex-col'
+            layout === 'grid-4' || layout === 'grid-6' ? 'grid grid-cols-2' : 'flex flex-col'
           }`}
         >
           {photos.map((photoUrl, idx) => (

@@ -33,6 +33,8 @@ const SAMPLE_PORTRAITS = [
   'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=400&auto=format&fit=crop&q=80',
   'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=400&auto=format&fit=crop&q=80',
   'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=400&auto=format&fit=crop&q=80',
 ]
 
 export default function StyleSelectScreen({
@@ -82,6 +84,27 @@ export default function StyleSelectScreen({
       sub: '2x2 Photoism Style',
       slots: 4,
       type: '2x2',
+    },
+    {
+      id: 'strip-6',
+      title: '6-Cut Dọc',
+      sub: '1x6 Life4Cuts Max',
+      slots: 6,
+      type: '1x6',
+    },
+    {
+      id: 'grid-6',
+      title: '6-Cut Ghép Ô',
+      sub: '2x3 Collage',
+      slots: 6,
+      type: '2x3',
+    },
+    {
+      id: 'strip-3',
+      title: '3-Cut Dọc',
+      sub: '1x3 Haru Film Style',
+      slots: 3,
+      type: '1x3',
     },
     {
       id: 'strip-2',
@@ -327,7 +350,7 @@ export default function StyleSelectScreen({
                 <div className="bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full flex items-center gap-1.5 border border-white/20 text-white">
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                   <span className="text-[10px] font-black uppercase tracking-wider">
-                    {layout === 'grid-4' ? '2x2 Ô Vuông' : layout === 'strip-2' ? '1x2 Duo' : '1x4 Dọc'}
+                    {layoutItems.find((i) => i.id === layout)?.title || '4-Cut Dọc'}
                   </span>
                 </div>
 
@@ -412,47 +435,38 @@ export default function StyleSelectScreen({
                   <span>Chọn Kiểu Dải Ảnh (Layout)</span>
                 </h3>
                 <span className="text-xs font-black text-[#FF3D96] bg-pink-50 px-2.5 py-0.5 rounded-full border border-pink-100">
-                  {layout === 'strip-2' ? '2 Poses' : '4 Poses'}
+                  {layoutItems.find((i) => i.id === layout)?.slots || 4} Poses
                 </span>
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 sm:gap-2.5">
                 {layoutItems.map((item) => {
                   const isSelected = layout === item.id
                   return (
                     <button
                       key={item.id}
                       onClick={() => setLayout(item.id)}
-                      className={`p-2.5 sm:p-3 rounded-2xl border-2 transition-all cursor-pointer relative flex flex-col items-center justify-between gap-2 group ${
+                      className={`p-2 sm:p-2.5 rounded-2xl border-2 transition-all cursor-pointer relative flex flex-col items-center justify-between gap-1.5 group ${
                         isSelected
                           ? 'border-[#FF3D96] bg-pink-50/50 shadow-md shadow-pink-500/10 ring-2 ring-pink-300'
                           : 'border-pink-100 bg-[#FFFDF9] hover:border-pink-300'
                       }`}
                     >
                       {/* REAL MINI PHOTO STRIP SHOWCASE */}
-                      <div className="w-16 h-28 bg-white rounded-xl border border-pink-200 p-1 flex flex-col justify-between items-center shadow-xs overflow-hidden">
-                        {item.id === 'strip-4' && (
+                      <div className="w-13 sm:w-14 h-28 bg-white rounded-xl border border-pink-200 p-1 flex flex-col justify-between items-center shadow-xs overflow-hidden">
+                        {(item.type === '1x4' || item.type === '1x6' || item.type === '1x3' || item.type === '1x2') && (
                           <div className="w-full flex flex-col justify-between h-full gap-0.5">
-                            {SAMPLE_PORTRAITS.map((url, idx) => (
-                              <div key={idx} className="w-full h-5 rounded-xs overflow-hidden bg-neutral-100">
+                            {SAMPLE_PORTRAITS.slice(0, item.slots).map((url, idx) => (
+                              <div key={idx} className="w-full flex-1 rounded-xs overflow-hidden bg-neutral-100">
                                 <img src={url} alt={`Pose ${idx + 1}`} className="w-full h-full object-cover" />
                               </div>
                             ))}
                           </div>
                         )}
-                        {item.id === 'grid-4' && (
+                        {(item.type === '2x2' || item.type === '2x3') && (
                           <div className="w-full grid grid-cols-2 gap-0.5 h-full">
-                            {SAMPLE_PORTRAITS.map((url, idx) => (
-                              <div key={idx} className="w-full h-11 rounded-xs overflow-hidden bg-neutral-100">
-                                <img src={url} alt={`Pose ${idx + 1}`} className="w-full h-full object-cover" />
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                        {item.id === 'strip-2' && (
-                          <div className="w-full flex flex-col justify-around h-full gap-1">
-                            {SAMPLE_PORTRAITS.slice(0, 2).map((url, idx) => (
-                              <div key={idx} className="w-full h-11 rounded-xs overflow-hidden bg-neutral-100">
+                            {SAMPLE_PORTRAITS.slice(0, item.slots).map((url, idx) => (
+                              <div key={idx} className="w-full flex-1 rounded-xs overflow-hidden bg-neutral-100">
                                 <img src={url} alt={`Pose ${idx + 1}`} className="w-full h-full object-cover" />
                               </div>
                             ))}
@@ -461,11 +475,11 @@ export default function StyleSelectScreen({
                       </div>
 
                       <div className="text-center w-full">
-                        <p className="font-black text-xs text-[#29252C] truncate">
+                        <p className="font-black text-[11px] sm:text-xs text-[#29252C] truncate">
                           {item.title}
                         </p>
-                        <p className="text-[9px] text-[#766F7B] font-bold">
-                          {item.type}
+                        <p className="text-[8px] sm:text-[9px] text-[#766F7B] font-bold">
+                          {item.slots} Poses
                         </p>
                       </div>
                     </button>
@@ -806,7 +820,7 @@ export default function StyleSelectScreen({
             className="w-full py-4 rounded-full bg-gradient-to-r from-[#FF3D96] via-[#FF589E] to-[#FF75A9] hover:from-[#E62E84] hover:to-[#FF589E] text-white font-black text-base shadow-xl shadow-[#FF3D96]/30 transition-all duration-300 active:scale-98 flex items-center justify-center gap-2 cursor-pointer"
           >
             <Camera size={20} />
-            <span>TIẾP TỤC CHỤP ẢNH ({layout === 'strip-2' ? '2' : '4'} POSE)</span>
+            <span>TIẾP TỤC CHỤP ẢNH ({layoutItems.find((i) => i.id === layout)?.slots || 4} POSE)</span>
             <ArrowRight size={18} />
           </button>
         </div>
