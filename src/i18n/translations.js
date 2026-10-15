@@ -61,12 +61,27 @@ export const translations = {
 
     // Decorate & Edit Screen
     edit_title: 'Tùy Chỉnh Dải Ảnh Của Bạn',
-    edit_desc: 'Chọn màu viền, gắn sticker ngộ nghĩnh và ghi tiêu đề kỷ niệm.',
+    edit_desc: 'Chọn màu viền, gắn sticker ngộ nghĩnh, vẽ Purikura và ghi tiêu đề kỷ niệm.',
     strip_title_label: 'Tiêu Đề Dải Ảnh:',
     strip_title_placeholder: 'VD: K-PHOTOBOOTH, HARU 2026...',
     frame_color_label: 'Màu Khung Ảnh:',
     sticker_label: 'Nhấn Sticker Để Thêm Vào Ảnh:',
     sticker_remove_hint: 'Nhấn để xóa sticker',
+    
+    // Purikura Doodle Studio
+    tab_stickers: 'Sticker Y2K',
+    tab_doodle: 'Vẽ Tay Purikura ✨',
+    brush_neon: 'Cọ Neon',
+    brush_pastel: 'Bút Dạ',
+    brush_sparkle: 'Cọ Lấp Lánh',
+    brush_eraser: 'Gôm Tẩy',
+    btn_undo: 'Hoàn tác',
+    btn_redo: 'Làm lại',
+    btn_clear_doodle: 'Xóa hết nét',
+    doodle_hint: 'Dùng ngón tay hoặc chuột vẽ trực tiếp lên dải ảnh!',
+    doodle_color_label: 'Màu sắc:',
+    doodle_size_label: 'Kích cỡ nét:',
+    
     btn_retake: 'Chụp Lại',
     btn_retake_confirm: 'Bạn có muốn chụp lại từ đầu không?',
     btn_export: 'Xuất Ảnh & Quét QR',
@@ -86,9 +101,13 @@ export const translations = {
 
     // Share & Export Modal
     modal_ready_title: 'Ảnh Của Bạn Đã Sẵn Sàng!',
-    modal_ready_desc: 'Lưu kỷ niệm, in ngay dải ảnh hoặc quét mã QR để tải về điện thoại.',
+    modal_ready_desc: 'Lưu kỷ niệm, in ngay dải ảnh, xuất video Boomerang hoặc quét mã QR để tải về điện thoại.',
     qr_hint: 'Quét để tải về máy',
     btn_download_hd: 'Tải Về Máy (HD 300 DPI)',
+    btn_export_boomerang: '🎬 Xuất Video Boomerang (MP4)',
+    btn_download_video: 'Tải Video MP4 Về Máy',
+    exporting_video: 'Đang kết xuất video GPU...',
+    boomerang_desc: 'Dải ảnh chuyển động 4 giây cực mượt chia sẻ lên TikTok / Reels!',
     btn_print: 'In Ảnh Dải Strip',
     btn_share: 'Chia Sẻ',
     share_copied: 'Đã sao chép liên kết vào bộ nhớ tạm!',
@@ -151,12 +170,27 @@ export const translations = {
 
     // Decorate & Edit Screen
     edit_title: 'Customize Your Photo Strip',
-    edit_desc: 'Choose frame colors, add playful stickers, and customize your commemorative title.',
+    edit_desc: 'Choose frame colors, add playful stickers, doodle with Purikura pens, and customize your commemorative title.',
     strip_title_label: 'Strip Title:',
     strip_title_placeholder: 'E.g. K-PHOTOBOOTH, HARU 2026...',
     frame_color_label: 'Frame Color:',
     sticker_label: 'Tap Sticker To Place On Strip:',
     sticker_remove_hint: 'Click to remove sticker',
+
+    // Purikura Doodle Studio
+    tab_stickers: 'Y2K Stickers',
+    tab_doodle: 'Purikura Doodle ✨',
+    brush_neon: 'Neon Pen',
+    brush_pastel: 'Pastel Pen',
+    brush_sparkle: 'Sparkle Stamp',
+    brush_eraser: 'Eraser',
+    btn_undo: 'Undo',
+    btn_redo: 'Redo',
+    btn_clear_doodle: 'Clear All',
+    doodle_hint: 'Draw freely directly over your photos with finger or mouse!',
+    doodle_color_label: 'Color:',
+    doodle_size_label: 'Brush Size:',
+
     btn_retake: 'Retake',
     btn_retake_confirm: 'Do you want to retake all shots from the beginning?',
     btn_export: 'Export & QR Code',
@@ -176,9 +210,13 @@ export const translations = {
 
     // Share & Export Modal
     modal_ready_title: 'Your Photos Are Ready!',
-    modal_ready_desc: 'Save memories, print photo strips instantly, or scan the QR code to download to your phone.',
+    modal_ready_desc: 'Save memories, print photo strips instantly, export Boomerang video, or scan the QR code to download.',
     qr_hint: 'Scan with phone camera',
     btn_download_hd: 'Download (HD 300 DPI)',
+    btn_export_boomerang: '🎬 Export Boomerang Video (MP4)',
+    btn_download_video: 'Download MP4 Video',
+    exporting_video: 'Rendering GPU video...',
+    boomerang_desc: '4-second animated photo strip ready for TikTok & Instagram Reels!',
     btn_print: 'Print Photo Strip',
     btn_share: 'Share',
     share_copied: 'Link copied to clipboard!',
@@ -241,12 +279,27 @@ export const translations = {
 
     // Decorate & Edit Screen
     edit_title: '나만의 네컷사진 꾸미기',
-    edit_desc: '프레임 컬러 선택, 감성 스티커 부착, 기념 문구를 직접 적어보세요.',
+    edit_desc: '프레임 컬러 선택, 감성 스티커 부착, 프리쿠라 드로잉, 기념 문구를 직접 적어보세요.',
     strip_title_label: '상단 타이틀:',
     strip_title_placeholder: '예: K-PHOTOBOOTH, 2026 추억...',
     frame_color_label: '프레임 컬러:',
     sticker_label: '스티커를 눌러 사진에 추가하세요:',
     sticker_remove_hint: '클릭하여 스티커 삭제',
+
+    // Purikura Doodle Studio
+    tab_stickers: 'Y2K 스티커',
+    tab_doodle: '프리쿠라 드로잉 ✨',
+    brush_neon: '네온 펜',
+    brush_pastel: '파스텔 펜',
+    brush_sparkle: '반짝이 스탬프',
+    brush_eraser: '지우개',
+    btn_undo: '실행 취소',
+    btn_redo: '다시 실행',
+    btn_clear_doodle: '모두 지우기',
+    doodle_hint: '손가락이나 마우스로 사진 위에 자유롭게 그림을 그려보세요!',
+    doodle_color_label: '색상:',
+    doodle_size_label: '브러시 크기:',
+
     btn_retake: '다시 촬영',
     btn_retake_confirm: '처음부터 다시 촬영하시겠습니까?',
     btn_export: '사진 출력 & QR 코드',
@@ -266,9 +319,13 @@ export const translations = {
 
     // Share & Export Modal
     modal_ready_title: '사진이 완성되었습니다!',
-    modal_ready_desc: '소중한 추억을 다운로드하거나 QR 코드를 스캔해 스마트폰으로 바로 저장하세요.',
+    modal_ready_desc: '소중한 추억을 다운로드하거나 부메랑 비디오를 생성하고 QR 코드로 스마트폰에 바로 저장하세요.',
     qr_hint: '스마트폰으로 QR 스캔',
     btn_download_hd: '고화질 다운로드 (HD 300 DPI)',
+    btn_export_boomerang: '🎬 움직이는 네컷 비디오 (MP4)',
+    btn_download_video: 'MP4 비디오 다운로드',
+    exporting_video: 'GPU 비디오 렌더링 중...',
+    boomerang_desc: 'TikTok 및 릴스에 공유하기 좋은 4초 부메랑 비디오!',
     btn_print: '포토 스트립 즉석 인화',
     btn_share: '공유하기',
     share_copied: '링크가 클립보드에 복사되었습니다!',
@@ -331,12 +388,27 @@ export const translations = {
 
     // Decorate & Edit Screen
     edit_title: 'フォトストリップをカスタムデコ',
-    edit_desc: 'フレームカラーの変更、ステッカーの貼り付け、思い出のタイトルを入力。',
+    edit_desc: 'フレームカラーの変更、ステッカーの貼り付け、プリクラお絵かき、思い出のタイトルを入力。',
     strip_title_label: 'ストリップタイトル:',
     strip_title_placeholder: '例: K-PHOTOBOOTH, 2026...',
     frame_color_label: 'フレームカラー:',
     sticker_label: 'ステッカーをタップして追加:',
     sticker_remove_hint: 'クリックしてステッカーを削除',
+
+    // Purikura Doodle Studio
+    tab_stickers: 'Y2K ステッカー',
+    tab_doodle: 'プリクラお絵かき ✨',
+    brush_neon: 'ネオンペン',
+    brush_pastel: 'パステルペン',
+    brush_sparkle: 'キラキラスランプ',
+    brush_eraser: '消しゴム',
+    btn_undo: '元に戻す',
+    btn_redo: 'やり直し',
+    btn_clear_doodle: 'すべて消去',
+    doodle_hint: '指やマウスで写真の上に自由にデコレーション！',
+    doodle_color_label: 'カラー:',
+    doodle_size_label: 'ペンの太さ:',
+
     btn_retake: '撮り直す',
     btn_retake_confirm: '最初から撮り直しますか？',
     btn_export: '写真出力 & QRコード',
@@ -356,9 +428,13 @@ export const translations = {
 
     // Share & Export Modal
     modal_ready_title: '写真の準備ができました！',
-    modal_ready_desc: '思い出を保存、フォトストリップを即座に印刷、またはQRコードでスマホに保存。',
+    modal_ready_desc: '思い出を保存、フォトストリップを即座に印刷、ブーメラン動画を出力、またはQRコードでスマホに保存。',
     qr_hint: 'スマホのカメラでQRスキャン',
     btn_download_hd: '高画質保存 (HD 300 DPI)',
+    btn_export_boomerang: '🎬 動くフォト動画を出力 (MP4)',
+    btn_download_video: 'MP4動画をダウンロード',
+    exporting_video: 'GPU動画レンダリング中...',
+    boomerang_desc: 'TikTokやリールに最適な4秒間のなめらかブーメラン動画！',
     btn_print: 'フォトストリップ印刷',
     btn_share: '共有する',
     share_copied: 'リンクをクリップボードにコピーしました！',

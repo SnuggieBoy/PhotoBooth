@@ -10,12 +10,26 @@ import {
   ChevronRight,
   ArrowLeft,
   CheckCircle,
+  Brush,
+  Eraser,
+  Undo2,
+  Redo2,
+  Trash2,
 } from 'lucide-react'
 import CameraView from './components/CameraView'
 import PhotoStripPreview from './components/PhotoStripPreview'
 import ShareModal from './components/ShareModal'
 import { FILTERS, FRAME_COLORS, STICKERS } from './utils/filters'
 import { useLanguage, LanguageSelector } from './i18n/LanguageContext'
+import {
+  BRUSH_TYPES,
+  DOODLE_COLORS,
+  BRUSH_SIZES,
+  SPARKLE_EMOJIS,
+  drawSingleStroke,
+} from './utils/doodleEngine'
+import { exportBoomerangMp4 } from './utils/boomerangExporter'
+import { COLLAB_FRAMES } from './utils/collabFrames'
 
 export default function App() {
   const { t, language } = useLanguage()
@@ -29,13 +43,29 @@ export default function App() {
   const [countdownDuration, setCountdownDuration] = useState(3) // 3s
   const [frameColor, setFrameColor] = useState(FRAME_COLORS[0]) // White
   const [customText, setCustomText] = useState('K-PHOTOBOOTH')
+  const [selectedCollabFrame, setSelectedCollabFrame] = useState(COLLAB_FRAMES[0])
 
-  // Captured Photos Array
+  // Captured Photos & Boomerang Video Clips
   const [photos, setPhotos] = useState([])
+  const [videoClips, setVideoClips] = useState([])
   const [currentShotIndex, setCurrentShotIndex] = useState(0)
 
   // Stickers placed on the strip
   const [placedStickers, setPlacedStickers] = useState([])
+
+  // Purikura Doodle Studio State
+  const [editTab, setEditTab] = useState('stickers') // 'stickers' | 'doodle'
+  const [doodleStrokes, setDoodleStrokes] = useState([])
+  const [doodleUndoStack, setDoodleUndoStack] = useState([])
+  const [activeDoodleTool, setActiveDoodleTool] = useState(BRUSH_TYPES.NEON)
+  const [doodleColor, setDoodleColor] = useState(DOODLE_COLORS[0].value) // Neon pink
+  const [doodleSize, setDoodleSize] = useState(BRUSH_SIZES[1].size) // Medium (12)
+  const [sparkleEmoji, setSparkleEmoji] = useState(SPARKLE_EMOJIS[0]) // '✨'
+
+  // Boomerang Export State
+  const [isExportingVideo, setIsExportingVideo] = useState(false)
+  const [exportProgress, setExportProgress] = useState(0)
+  const [boomerangVideoUrl, setBoomerangVideoUrl] = useState(null)
 
   // Modal State
   const [isShareModalOpen, setIsShareModalOpen] = useState(false)
@@ -45,9 +75,10 @@ export default function App() {
   const targetShotsCount = layout === 'strip-2' ? 2 : 4
 
   // Handle a new snapshot taken from CameraView
-  const handlePhotoTaken = (dataUrl) => {
+  const handlePhotoTaken = (dataUrl, capturedFrames = []) => {
     const updatedPhotos = [...photos, dataUrl]
     setPhotos(updatedPhotos)
+    setVideoClips((prev) => [...prev, capturedFrames])
 
     if (updatedPhotos.length < targetShotsCount) {
       setCurrentShotIndex(updatedPhotos.length)
@@ -60,9 +91,47 @@ export default function App() {
   // Start capture session
   const startSession = () => {
     setPhotos([])
+    setVideoClips([])
     setCurrentShotIndex(0)
     setPlacedStickers([])
+    setDoodleStrokes([])
+    setDoodleUndoStack([])
+    setBoomerangVideoUrl(null)
     setStep('capturing')
+  }
+
+  // Export Boomerang MP4 Video
+  const handleExportBoomerang = async () => {
+    if (videoClips.length === 0) return
+    setIsExportingVideo(true)
+    setExportProgress(0)
+    try {
+      const { url } = await exportBoomerangMp4({
+        videoClips,
+        layout,
+        frameColor,
+        customText,
+        stickers: placedStickers,
+        doodleStrokes,
+        filterCss: selectedFilter.css,
+        language,
+        onProgress: (p) => setExportProgress(p),
+      })
+      setBoomerangVideoUrl(url)
+    } catch (err) {
+      console.error('Boomerang error:', err)
+      alert('Lỗi tạo video Boomerang: ' + err.message)
+    } finally {
+      setIsExportingVideo(false)
+    }
+  }
+
+  const handleDownloadVideo = () => {
+    if (!boomerangVideoUrl) return
+    const link = document.createElement('a')
+    link.download = `k-photobooth-boomerang-${Date.now()}.mp4`
+    link.href = boomerangVideoUrl
+    link.click()
   }
 
   // Reset to start
@@ -85,6 +154,34 @@ export default function App() {
 
   const handleRemoveSticker = (id) => {
     setPlacedStickers((prev) => prev.filter((s) => s.id !== id))
+  }
+
+  // Doodle Handlers
+  const handleDoodleStrokeComplete = (newStroke) => {
+    setDoodleStrokes((prev) => [...prev, newStroke])
+    setDoodleUndoStack([]) // Clear redo stack on new action
+  }
+
+  const handleUndoDoodle = () => {
+    if (doodleStrokes.length === 0) return
+    const last = doodleStrokes[doodleStrokes.length - 1]
+    setDoodleStrokes((prev) => prev.slice(0, prev.length - 1))
+    setDoodleUndoStack((prev) => [...prev, last])
+  }
+
+  const handleRedoDoodle = () => {
+    if (doodleUndoStack.length === 0) return
+    const next = doodleUndoStack[doodleUndoStack.length - 1]
+    setDoodleUndoStack((prev) => prev.slice(0, prev.length - 1))
+    setDoodleStrokes((prev) => [...prev, next])
+  }
+
+  const handleClearDoodles = () => {
+    if (doodleStrokes.length === 0) return
+    if (window.confirm(t('btn_clear_doodle') + '?')) {
+      setDoodleUndoStack((prev) => [...prev, ...doodleStrokes])
+      setDoodleStrokes([])
+    }
   }
 
   // High-Resolution 300 DPI Canvas Rendering & Download
@@ -157,13 +254,31 @@ export default function App() {
       ctx.fillText(stk.emoji, sx, sy)
     })
 
+    // Draw Purikura Doodles with Sub-Pixel Scale Alignment
+    if (doodleStrokes.length > 0) {
+      const previewEl = stripRef.current
+      const previewWidth = previewEl?.clientWidth || (isGrid ? 380 : 260)
+      const doodleScale = stripWidth / previewWidth
+
+      doodleStrokes.forEach((stroke) => {
+        drawSingleStroke(ctx, stroke, doodleScale)
+      })
+    }
+
     // Footer Info
     const footerY = stripHeight - 20 * scale
     ctx.font = `700 ${9 * scale}px sans-serif`
     ctx.textAlign = 'left'
     ctx.fillStyle = frameColor.text
 
-    const locale = language === 'vi' ? 'vi-VN' : language === 'ko' ? 'ko-KR' : language === 'ja' ? 'ja-JP' : 'en-US'
+    const locale =
+      language === 'vi'
+        ? 'vi-VN'
+        : language === 'ko'
+        ? 'ko-KR'
+        : language === 'ja'
+        ? 'ja-JP'
+        : 'en-US'
     ctx.fillText(
       new Date().toLocaleDateString(locale, {
         day: '2-digit',
@@ -336,6 +451,35 @@ export default function App() {
               </div>
             </div>
 
+            {/* Concept / Idol Collab Cutouts */}
+            <div className="space-y-3">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-400 flex items-center gap-1.5">
+                <Sparkles size={15} /> Khung Ghép Thần Tượng & AR Concept
+              </h3>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                {COLLAB_FRAMES.map((cf) => (
+                  <button
+                    key={cf.id}
+                    onClick={() => setSelectedCollabFrame(cf)}
+                    className={`p-3 rounded-2xl border text-left transition ${
+                      selectedCollabFrame.id === cf.id
+                        ? 'border-pink-500 bg-pink-500/10 shadow-md shadow-pink-500/15'
+                        : 'border-neutral-800 bg-neutral-900/60 hover:border-neutral-700'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xl">{cf.icon}</span>
+                      <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded-full bg-pink-500/20 text-pink-400">
+                        {cf.badge}
+                      </span>
+                    </div>
+                    <p className="font-bold text-xs text-white">{cf.name}</p>
+                    <p className="text-[10px] text-neutral-400 truncate">{cf.description || cf.enName}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* Countdown Duration */}
             <div className="space-y-3">
               <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-400 flex items-center gap-1.5">
@@ -380,9 +524,16 @@ export default function App() {
               >
                 <ArrowLeft size={14} /> {t('reselect_layout')}
               </button>
-              <span className="text-xs font-bold text-pink-400">
-                {t('active_filter')}: {t(selectedFilter.nameKey) || selectedFilter.name}
-              </span>
+              <div className="flex items-center gap-2 text-xs font-bold">
+                {selectedCollabFrame.id !== 'none' && (
+                  <span className="text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-full border border-amber-400/20">
+                    {selectedCollabFrame.icon} {selectedCollabFrame.name}
+                  </span>
+                )}
+                <span className="text-pink-400">
+                  {t('active_filter')}: {t(selectedFilter.nameKey) || selectedFilter.name}
+                </span>
+              </div>
             </div>
 
             <CameraView
@@ -391,6 +542,7 @@ export default function App() {
               currentShotIndex={currentShotIndex}
               filterCss={selectedFilter.css}
               countdownDuration={countdownDuration}
+              collabFrame={selectedCollabFrame.id}
             />
 
             {/* Thumbnails of already taken shots */}
@@ -422,7 +574,7 @@ export default function App() {
         {/* ================= STEP 3: DECORATE & EDIT ================= */}
         {step === 'editing' && (
           <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start py-4">
-            {/* Left: Strip Live Preview */}
+            {/* Left: Strip Live Preview with Purikura Canvas Overlay */}
             <div className="md:col-span-5 flex justify-center sticky top-20">
               <PhotoStripPreview
                 stripRef={stripRef}
@@ -432,6 +584,13 @@ export default function App() {
                 customText={customText}
                 stickers={placedStickers}
                 onRemoveSticker={handleRemoveSticker}
+                doodleStrokes={doodleStrokes}
+                onDoodleStrokeComplete={handleDoodleStrokeComplete}
+                activeDoodleTool={activeDoodleTool}
+                doodleColor={doodleColor}
+                doodleSize={doodleSize}
+                sparkleEmoji={sparkleEmoji}
+                isDoodleMode={editTab === 'doodle'}
               />
             </div>
 
@@ -439,9 +598,7 @@ export default function App() {
             <div className="md:col-span-7 space-y-6 bg-neutral-900/60 border border-neutral-800 rounded-3xl p-6 backdrop-blur-md">
               <div>
                 <h3 className="text-lg font-black text-white">{t('edit_title')}</h3>
-                <p className="text-xs text-neutral-400">
-                  {t('edit_desc')}
-                </p>
+                <p className="text-xs text-neutral-400">{t('edit_desc')}</p>
               </div>
 
               {/* Title Input */}
@@ -486,23 +643,187 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Sticker Selector */}
-              <div className="space-y-2.5">
-                <label className="text-xs font-bold uppercase tracking-wider text-neutral-400 flex items-center gap-1.5">
-                  <Smile size={14} /> {t('sticker_label')}
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {STICKERS.map((stk, i) => (
-                    <button
-                      key={i}
-                      onClick={() => handleAddSticker(stk)}
-                      className="w-10 h-10 rounded-xl bg-neutral-950 hover:bg-neutral-800 border border-neutral-800 text-xl flex items-center justify-center transition active:scale-95"
-                    >
-                      {stk}
-                    </button>
-                  ))}
+              {/* Tab Selector: Stickers vs Purikura Doodle Studio */}
+              <div className="pt-2 border-t border-neutral-800">
+                <div className="flex bg-neutral-950 p-1 rounded-2xl border border-neutral-800 gap-1">
+                  <button
+                    onClick={() => setEditTab('stickers')}
+                    className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 ${
+                      editTab === 'stickers'
+                        ? 'bg-neutral-800 text-white shadow-sm'
+                        : 'text-neutral-400 hover:text-white'
+                    }`}
+                  >
+                    <Smile size={15} /> {t('tab_stickers')}
+                  </button>
+                  <button
+                    onClick={() => setEditTab('doodle')}
+                    className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 ${
+                      editTab === 'doodle'
+                        ? 'bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-md shadow-pink-500/25'
+                        : 'text-neutral-400 hover:text-white'
+                    }`}
+                  >
+                    <Brush size={15} /> {t('tab_doodle')}
+                  </button>
                 </div>
               </div>
+
+              {/* TAB 1: Sticker Selector */}
+              {editTab === 'stickers' && (
+                <div className="space-y-2.5 animate-fade-in">
+                  <label className="text-xs font-bold uppercase tracking-wider text-neutral-400 flex items-center gap-1.5">
+                    <Smile size={14} /> {t('sticker_label')}
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {STICKERS.map((stk, i) => (
+                      <button
+                        key={i}
+                        onClick={() => handleAddSticker(stk)}
+                        className="w-10 h-10 rounded-xl bg-neutral-950 hover:bg-neutral-800 border border-neutral-800 text-xl flex items-center justify-center transition active:scale-95"
+                      >
+                        {stk}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 2: Purikura Doodle Studio Controls */}
+              {editTab === 'doodle' && (
+                <div className="space-y-4 animate-fade-in bg-neutral-950/70 p-4 rounded-2xl border border-pink-500/20">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-extrabold uppercase tracking-widest text-pink-400 flex items-center gap-1.5">
+                      <Sparkles size={14} /> {t('doodle_hint')}
+                    </span>
+
+                    {/* Undo / Redo / Clear actions */}
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        disabled={doodleStrokes.length === 0}
+                        onClick={handleUndoDoodle}
+                        className="p-1.5 rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-300 hover:text-white hover:bg-neutral-800 disabled:opacity-40 transition"
+                        title={t('btn_undo')}
+                      >
+                        <Undo2 size={14} />
+                      </button>
+                      <button
+                        disabled={doodleUndoStack.length === 0}
+                        onClick={handleRedoDoodle}
+                        className="p-1.5 rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-300 hover:text-white hover:bg-neutral-800 disabled:opacity-40 transition"
+                        title={t('btn_redo')}
+                      >
+                        <Redo2 size={14} />
+                      </button>
+                      <button
+                        disabled={doodleStrokes.length === 0}
+                        onClick={handleClearDoodles}
+                        className="p-1.5 rounded-lg bg-neutral-900 border border-neutral-800 text-rose-400 hover:text-rose-300 hover:bg-rose-950/40 disabled:opacity-40 transition"
+                        title={t('btn_clear_doodle')}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Brush Type Selector */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {[
+                      { id: BRUSH_TYPES.NEON, label: t('brush_neon'), icon: Sparkles },
+                      { id: BRUSH_TYPES.PASTEL, label: t('brush_pastel'), icon: Brush },
+                      { id: BRUSH_TYPES.SPARKLE, label: t('brush_sparkle'), icon: Smile },
+                      { id: BRUSH_TYPES.ERASER, label: t('brush_eraser'), icon: Eraser },
+                    ].map((tool) => {
+                      const Icon = tool.icon
+                      const isActive = activeDoodleTool === tool.id
+                      return (
+                        <button
+                          key={tool.id}
+                          onClick={() => setActiveDoodleTool(tool.id)}
+                          className={`py-2 px-2.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition ${
+                            isActive
+                              ? 'border-pink-500 bg-pink-500 text-white shadow-sm shadow-pink-500/50'
+                              : 'border-neutral-800 bg-neutral-900 text-neutral-300 hover:border-neutral-700'
+                          }`}
+                        >
+                          <Icon size={14} />
+                          <span className="truncate">{tool.label}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+
+                  {/* Sparkle Emoji Selector (If Sparkle Brush active) */}
+                  {activeDoodleTool === BRUSH_TYPES.SPARKLE && (
+                    <div className="space-y-1.5">
+                      <span className="text-[11px] font-bold text-neutral-400">
+                        Chọn họa tiết đóng dấu:
+                      </span>
+                      <div className="flex gap-2">
+                        {SPARKLE_EMOJIS.map((em) => (
+                          <button
+                            key={em}
+                            onClick={() => setSparkleEmoji(em)}
+                            className={`w-9 h-9 rounded-xl border text-lg flex items-center justify-center transition ${
+                              sparkleEmoji === em
+                                ? 'border-pink-500 bg-pink-500/20'
+                                : 'border-neutral-800 bg-neutral-900 hover:border-neutral-700'
+                            }`}
+                          >
+                            {em}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Color Swatches (Only when not in eraser mode) */}
+                  {activeDoodleTool !== BRUSH_TYPES.ERASER && (
+                    <div className="space-y-1.5">
+                      <span className="text-[11px] font-bold text-neutral-400">
+                        {t('doodle_color_label')}
+                      </span>
+                      <div className="flex flex-wrap gap-2">
+                        {DOODLE_COLORS.map((col) => (
+                          <button
+                            key={col.id}
+                            onClick={() => setDoodleColor(col.value)}
+                            title={col.label}
+                            style={{ backgroundColor: col.value }}
+                            className={`w-7 h-7 rounded-full border-2 transition-transform ${
+                              doodleColor === col.value
+                                ? 'scale-125 border-white ring-2 ring-pink-500/50'
+                                : 'border-black/30 hover:scale-110'
+                            }`}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Brush Size Selector */}
+                  <div className="flex items-center gap-3 pt-1">
+                    <span className="text-[11px] font-bold text-neutral-400">
+                      {t('doodle_size_label')}
+                    </span>
+                    <div className="flex gap-2">
+                      {BRUSH_SIZES.map((sz) => (
+                        <button
+                          key={sz.id}
+                          onClick={() => setDoodleSize(sz.size)}
+                          className={`w-8 h-8 rounded-xl border text-xs font-extrabold flex items-center justify-center transition ${
+                            doodleSize === sz.size
+                              ? 'border-pink-500 bg-pink-500/20 text-pink-400'
+                              : 'border-neutral-800 bg-neutral-900 text-neutral-400 hover:border-neutral-700'
+                          }`}
+                        >
+                          {sz.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Actions: Retake vs Share & Download */}
               <div className="pt-4 border-t border-neutral-800 flex flex-wrap gap-3">
@@ -531,6 +852,12 @@ export default function App() {
         onClose={() => setIsShareModalOpen(false)}
         onDownload={handleDownloadHD}
         onPrint={handlePrint}
+        onExportBoomerang={handleExportBoomerang}
+        onDownloadVideo={handleDownloadVideo}
+        isExportingVideo={isExportingVideo}
+        exportProgress={exportProgress}
+        boomerangVideoUrl={boomerangVideoUrl}
+        hasVideoClips={videoClips.length > 0}
       />
     </div>
   )

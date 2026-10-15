@@ -1,6 +1,7 @@
 import { useRef } from 'react'
 import { Sparkles, X } from 'lucide-react'
 import { useLanguage } from '../i18n/LanguageContext'
+import PurikuraDoodleCanvas from './PurikuraDoodleCanvas'
 
 export default function PhotoStripPreview({
   photos = [],
@@ -11,6 +12,14 @@ export default function PhotoStripPreview({
   stickers = [],
   onRemoveSticker,
   stripRef,
+  // Purikura Doodle props
+  doodleStrokes = [],
+  onDoodleStrokeComplete,
+  activeDoodleTool,
+  doodleColor,
+  doodleSize,
+  sparkleEmoji,
+  isDoodleMode = false,
 }) {
   const { t, language } = useLanguage()
 
@@ -30,7 +39,7 @@ export default function PhotoStripPreview({
           color: frameColor.text,
           borderColor: frameColor.border,
         }}
-        className={`relative transition-all duration-300 shadow-2xl p-4 sm:p-5 rounded-2xl border flex flex-col items-center ${
+        className={`relative transition-all duration-300 shadow-2xl p-4 sm:p-5 rounded-2xl border flex flex-col items-center select-none overflow-hidden ${
           layout === 'grid-4' ? 'w-[320px] sm:w-[380px]' : 'w-[230px] sm:w-[260px]'
         }`}
       >
@@ -44,7 +53,7 @@ export default function PhotoStripPreview({
         )}
 
         {/* Top Header / Logo */}
-        <div className="w-full text-center mb-3">
+        <div className="w-full text-center mb-3 pointer-events-none">
           <div className="flex items-center justify-center gap-1.5">
             <Sparkles size={13} className="text-pink-500" />
             <h4 className="text-[12px] font-black uppercase tracking-widest leading-none">
@@ -56,7 +65,7 @@ export default function PhotoStripPreview({
 
         {/* Photos Layout Container */}
         <div
-          className={`w-full gap-2.5 ${
+          className={`w-full gap-2.5 pointer-events-none ${
             layout === 'grid-4' ? 'grid grid-cols-2' : 'flex flex-col'
           }`}
         >
@@ -82,8 +91,10 @@ export default function PhotoStripPreview({
           <div
             key={stk.id}
             style={{ left: `${stk.x}%`, top: `${stk.y}%` }}
-            className="absolute -translate-x-1/2 -translate-y-1/2 text-2xl select-none cursor-pointer group hover:scale-125 transition-transform"
-            onClick={() => onRemoveSticker && onRemoveSticker(stk.id)}
+            className={`absolute -translate-x-1/2 -translate-y-1/2 text-2xl select-none group hover:scale-125 transition-transform z-20 ${
+              isDoodleMode ? 'pointer-events-none' : 'pointer-events-auto cursor-pointer'
+            }`}
+            onClick={() => !isDoodleMode && onRemoveSticker && onRemoveSticker(stk.id)}
             title={t('sticker_remove_hint')}
           >
             {stk.emoji}
@@ -93,8 +104,20 @@ export default function PhotoStripPreview({
           </div>
         ))}
 
+        {/* Purikura Doodle Canvas Layer (Overlay across photos & frame) */}
+        <PurikuraDoodleCanvas
+          strokes={doodleStrokes}
+          onStrokeComplete={onDoodleStrokeComplete}
+          activeTool={activeDoodleTool}
+          brushColor={doodleColor}
+          brushSize={doodleSize}
+          sparkleEmoji={sparkleEmoji}
+          isDrawingMode={isDoodleMode}
+          className="z-30"
+        />
+
         {/* Bottom Authentic K-Photobooth Footer (Date + Barcode + Slogan) */}
-        <div className="w-full mt-4 pt-2.5 border-t border-black/10 flex items-end justify-between text-[10px]">
+        <div className="w-full mt-4 pt-2.5 border-t border-black/10 flex items-end justify-between text-[10px] pointer-events-none">
           <div>
             <p className="font-extrabold tracking-wider">{formattedDate}</p>
             <p className="opacity-60 text-[8px] uppercase tracking-widest font-mono">
