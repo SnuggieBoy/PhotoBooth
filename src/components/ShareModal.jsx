@@ -24,6 +24,8 @@ export default function ShareModal({
   exportProgress = 0,
   boomerangVideoUrl = null,
   hasVideoClips = false,
+  onPrintDnpSplit,
+  onPrintThermalReceipt,
 }) {
   const { t } = useLanguage()
 
@@ -164,6 +166,30 @@ export default function ShareModal({
             >
               <Share2 size={15} /> {t('btn_share')}
             </button>
+          </div>
+
+          {/* Commercial Kiosk & Hardware Printers */}
+          <div className="pt-3 border-t border-neutral-800/80 space-y-2">
+            <span className="text-[10px] font-extrabold uppercase tracking-wider text-neutral-400 flex items-center gap-1.5">
+              <Printer size={13} className="text-amber-400" /> Chế Độ Kiosk & Máy In Chuyên Dụng
+            </span>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={onPrintDnpSplit}
+                className="py-2.5 px-2.5 rounded-xl bg-neutral-950 hover:bg-neutral-800 border border-amber-500/30 text-[11px] font-bold text-amber-300 flex items-center justify-center gap-1 transition active:scale-95"
+                title="Ghép 2 dải 2x6 trên khung 4x6 (1200x1800 300DPI) để dao máy DNP tự xẻ đôi"
+              >
+                <span>📸 In DNP 2x6 Split</span>
+              </button>
+
+              <button
+                onClick={onPrintThermalReceipt}
+                className="py-2.5 px-2.5 rounded-xl bg-neutral-950 hover:bg-neutral-800 border border-cyan-500/30 text-[11px] font-bold text-cyan-300 flex items-center justify-center gap-1 transition active:scale-95"
+                title="In dải ảnh đen trắng 1-bit Atkinson qua WebUSB / WebSerial"
+              >
+                <span>🧾 In Hóa Đơn Nhiệt</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>

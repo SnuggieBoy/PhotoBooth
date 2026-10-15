@@ -30,6 +30,8 @@ import {
 } from './utils/doodleEngine'
 import { exportBoomerangMp4 } from './utils/boomerangExporter'
 import { COLLAB_FRAMES } from './utils/collabFrames'
+import { createDnp2x6SplitCanvas } from './utils/dnpKioskAdapter'
+import { atkinsonDither, buildEscPosPayload, printViaWebUsb } from './utils/thermalDither'
 
 export default function App() {
   const { t, language } = useLanguage()
@@ -184,15 +186,14 @@ export default function App() {
     }
   }
 
-  // High-Resolution 300 DPI Canvas Rendering & Download
-  const handleDownloadHD = async () => {
-    if (photos.length === 0) return
+  // Shared High-Resolution Photo Strip Canvas Generator
+  const renderPhotoStripToCanvas = async (scale = 3) => {
+    if (photos.length === 0) return null
 
     const canvas = document.createElement('canvas')
     const ctx = canvas.getContext('2d')
 
     const isGrid = layout === 'grid-4'
-    const scale = 3 // High resolution scale
     const stripWidth = (isGrid ? 380 : 260) * scale
     const stripHeight = (isGrid ? 520 : 760) * scale
 
@@ -294,12 +295,66 @@ export default function App() {
     ctx.fillText(t('strip_city_slogan'), paddingX, footerY + 8 * scale)
     ctx.globalAlpha = 1.0
 
-    // Trigger Browser Download
+    return canvas
+  }
+
+  // High-Resolution 300 DPI Canvas Rendering & Download
+  const handleDownloadHD = async () => {
+    const canvas = await renderPhotoStripToCanvas(3)
+    if (!canvas) return
+
     const downloadUrl = canvas.toDataURL('image/png', 1.0)
     const link = document.createElement('a')
     link.download = `k-photobooth-${Date.now()}.png`
     link.href = downloadUrl
     link.click()
+  }
+
+  // DNP DS-RX1HS Commercial Kiosk 2x6 Split on 4x6 Paper
+  const handlePrintDnpSplit = async () => {
+    const stripCanvas = await renderPhotoStripToCanvas(3)
+    if (!stripCanvas) return
+
+    const splitCanvas = await createDnp2x6SplitCanvas(stripCanvas.toDataURL('image/png', 1.0))
+    const downloadUrl = splitCanvas.toDataURL('image/png', 1.0)
+    const link = document.createElement('a')
+    link.download = `dnp-rx1hs-2x6-split-${Date.now()}.png`
+    link.href = downloadUrl
+    link.click()
+  }
+
+  // Retro Thermal Receipt Printer (58mm/80mm 1-bit Atkinson Dithering)
+  const handlePrintThermalReceipt = async () => {
+    const stripCanvas = await renderPhotoStripToCanvas(1.5)
+    if (!stripCanvas) return
+
+    // Scale to standard 80mm printer width (576px)
+    const targetWidth = 576
+    const targetHeight = Math.round((targetWidth / stripCanvas.width) * stripCanvas.height)
+
+    const thermalCanvas = document.createElement('canvas')
+    thermalCanvas.width = targetWidth
+    thermalCanvas.height = targetHeight
+    const tCtx = thermalCanvas.getContext('2d')
+    tCtx.drawImage(stripCanvas, 0, 0, targetWidth, targetHeight)
+
+    const imageData = tCtx.getImageData(0, 0, targetWidth, targetHeight)
+    const { packed, bytesPerRow, height } = atkinsonDither(imageData)
+    const escPosBytes = buildEscPosPayload({ packed, bytesPerRow, height })
+
+    try {
+      await printViaWebUsb(escPosBytes)
+      alert('Đã gửi lệnh in ESC/POS thành công tới máy in nhiệt!')
+    } catch (err) {
+      console.warn('WebUSB Print fallback:', err)
+      // Provide download of Atkinson preview
+      const previewDataUrl = thermalCanvas.toDataURL('image/png')
+      const link = document.createElement('a')
+      link.download = `receipt-photobooth-${Date.now()}.png`
+      link.href = previewDataUrl
+      link.click()
+      alert('Chưa kết nối WebUSB máy in nhiệt. Đã tải dải ảnh đen trắng 1-bit Atkinson về máy!')
+    }
   }
 
   // Print trigger
@@ -857,6 +912,8 @@ export default function App() {
         isExportingVideo={isExportingVideo}
         exportProgress={exportProgress}
         boomerangVideoUrl={boomerangVideoUrl}
+        onPrintDnpSplit={handlePrintDnpSplit}
+        onPrintThermalReceipt={handlePrintThermalReceipt}
         hasVideoClips={videoClips.length > 0}
       />
     </div>

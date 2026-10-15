@@ -5,12 +5,17 @@ import {
   Sparkles,
   Volume2,
   VolumeX,
-  Maximize2,
-  Minimize2,
+  Hand,
+  Smile,
 } from 'lucide-react'
 import { soundFX } from '../utils/audio'
 import { useLanguage } from '../i18n/LanguageContext'
 import { ShotRingBuffer } from '../utils/videoBuffer'
+import {
+  initGestureRecognizer,
+  detectGesture,
+  BEAUTY_LEVELS,
+} from '../utils/aiVision'
 
 export default function CameraView({
   onPhotoTaken,
@@ -31,6 +36,15 @@ export default function CameraView({
   const [hasPermission, setHasPermission] = useState(null)
   const [soundEnabled, setSoundEnabled] = useState(true)
   const [isUltraWide, setIsUltraWide] = useState(false) // 0.5x lens simulation
+
+  // AI Features State
+  const [gestureEnabled, setGestureEnabled] = useState(false)
+  const [gestureToast, setGestureToast] = useState(null)
+  const [beautyLevel, setBeautyLevel] = useState(1) // 1 = Natural Bojeong by default
+
+  // Active composite filter: base filter + AI beauty filter
+  const activeBeautyCss = BEAUTY_LEVELS[beautyLevel]?.css || ''
+  const compositeFilterCss = `${filterCss && filterCss !== 'none' ? filterCss : ''} ${activeBeautyCss}`.trim() || 'none'
 
   // Initialize camera stream
   useEffect(() => {
@@ -95,6 +109,35 @@ export default function CameraView({
     }
   }, [isCountingDown])
 
+  // MediaPipe Gesture Recognition loop (Runs decoupled at ~8 Hz)
+  useEffect(() => {
+    let gestureInterval = null
+    let isDisposed = false
+
+    if (gestureEnabled && !isCountingDown) {
+      initGestureRecognizer().then((recognizer) => {
+        if (!recognizer || isDisposed) return
+
+        gestureInterval = setInterval(() => {
+          if (!videoRef.current || isCountingDown) return
+          const gesture = detectGesture(videoRef.current)
+
+          if (gesture === 'Victory' || gesture === 'Open_Palm') {
+            const label = gesture === 'Victory' ? '✌️ Chữ V (Victory)' : '🖐️ Mở Lòng Bàn Tay'
+            setGestureToast(`${label}! Bắt đầu chụp...`)
+            setTimeout(() => setGestureToast(null), 2500)
+            triggerCapture()
+          }
+        }, 125)
+      })
+    }
+
+    return () => {
+      isDisposed = true
+      if (gestureInterval) clearInterval(gestureInterval)
+    }
+  }, [gestureEnabled, isCountingDown])
+
   // Handle countdown trigger
   const triggerCapture = () => {
     if (isCountingDown) return
@@ -137,9 +180,9 @@ export default function CameraView({
       ctx.scale(-1, 1)
     }
 
-    // Apply active filter
-    if (filterCss && filterCss !== 'none') {
-      ctx.filter = filterCss
+    // Apply active composite filter (Filter preset + AI Bojeong)
+    if (compositeFilterCss && compositeFilterCss !== 'none') {
+      ctx.filter = compositeFilterCss
     }
 
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
@@ -156,6 +199,10 @@ export default function CameraView({
 
   const toggleFacingMode = () => {
     setFacingMode((prev) => (prev === 'user' ? 'environment' : 'user'))
+  }
+
+  const cycleBeautyLevel = () => {
+    setBeautyLevel((prev) => (prev + 1) % BEAUTY_LEVELS.length)
   }
 
   return (
@@ -191,7 +238,7 @@ export default function CameraView({
             autoPlay
             playsInline
             muted
-            style={{ filter: filterCss }}
+            style={{ filter: compositeFilterCss }}
             className={`w-full h-full object-cover transition-all ${
               facingMode === 'user' ? '-scale-x-100' : ''
             }`}
@@ -241,6 +288,16 @@ export default function CameraView({
         </div>
       )}
 
+      {/* Gesture Recognition Toast Notification */}
+      {gestureToast && (
+        <div className="absolute top-16 inset-x-0 flex justify-center z-40 pointer-events-none animate-bounce">
+          <div className="bg-pink-500 text-white font-extrabold text-xs px-4 py-2 rounded-full shadow-lg shadow-pink-500/40 flex items-center gap-2">
+            <Sparkles size={14} />
+            <span>{gestureToast}</span>
+          </div>
+        </div>
+      )}
+
       {/* Countdown Big Overlay */}
       {isCountingDown && (
         <div className="absolute inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center z-40 pointer-events-none">
@@ -258,7 +315,7 @@ export default function CameraView({
       {/* Top Controls Overlay */}
       <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-30 pointer-events-auto">
         {/* Shot Counter Pill */}
-        <div className="bg-black/60 backdrop-blur-md border border-white/10 px-4 py-1.5 rounded-full flex items-center gap-2 shadow-md">
+        <div className="bg-black/60 backdrop-blur-md border border-white/10 px-3.5 py-1.5 rounded-full flex items-center gap-2 shadow-md">
           <span className="w-2.5 h-2.5 rounded-full bg-pink-500 animate-pulse" />
           <span className="text-xs font-bold text-white tracking-wide">
             {t('shot_indicator')} {currentShotIndex + 1} / {shotsCount}
@@ -267,10 +324,38 @@ export default function CameraView({
 
         {/* Action icons */}
         <div className="flex items-center gap-2">
+          {/* Hands-free Gesture Trigger Toggle */}
+          <button
+            onClick={() => setGestureEnabled(!gestureEnabled)}
+            className={`h-9 px-2.5 rounded-full backdrop-blur-md border flex items-center gap-1.5 text-xs font-black transition active:scale-95 ${
+              gestureEnabled
+                ? 'bg-gradient-to-r from-pink-500 to-rose-500 border-pink-400 text-white shadow-md shadow-pink-500/30 ring-2 ring-pink-500/40'
+                : 'bg-black/60 border-white/10 text-white/80 hover:bg-black/80'
+            }`}
+            title="Chụp rảnh tay bằng cử chỉ (✌️ Chữ V hoặc 🖐️ Mở bàn tay)"
+          >
+            <span>✌️</span>
+            <span className="hidden sm:inline">Rảnh tay</span>
+          </button>
+
+          {/* AI Beauty Bojeong Level Button */}
+          <button
+            onClick={cycleBeautyLevel}
+            className={`h-9 px-2.5 rounded-full backdrop-blur-md border flex items-center gap-1 text-xs font-black transition active:scale-95 ${
+              beautyLevel > 0
+                ? 'bg-rose-500/20 border-rose-400/40 text-rose-300'
+                : 'bg-black/60 border-white/10 text-white/60 hover:bg-black/80'
+            }`}
+            title="Cấp độ làm mịn da AI (Bojeong)"
+          >
+            <span>{BEAUTY_LEVELS[beautyLevel].icon}</span>
+            <span className="hidden sm:inline">{BEAUTY_LEVELS[beautyLevel].label}</span>
+          </button>
+
           {/* 0.5x Ultra Wide Lens Toggle */}
           <button
             onClick={() => setIsUltraWide(!isUltraWide)}
-            className={`h-10 px-3 rounded-full backdrop-blur-md border flex items-center gap-1 text-xs font-black transition active:scale-95 ${
+            className={`h-9 px-2.5 rounded-full backdrop-blur-md border flex items-center gap-1 text-xs font-black transition active:scale-95 ${
               isUltraWide
                 ? 'bg-amber-400/90 border-amber-300 text-black shadow-md shadow-amber-400/30'
                 : 'bg-black/60 border-white/10 text-white hover:bg-black/80'
@@ -283,19 +368,19 @@ export default function CameraView({
           {/* Sound Toggle */}
           <button
             onClick={() => setSoundEnabled(!soundEnabled)}
-            className="w-10 h-10 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-white flex items-center justify-center hover:bg-black/80 transition active:scale-95"
+            className="w-9 h-9 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-white flex items-center justify-center hover:bg-black/80 transition active:scale-95"
             title={soundEnabled ? t('sound_mute') : t('sound_unmute')}
           >
-            {soundEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
+            {soundEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
           </button>
 
           {/* Camera Flip */}
           <button
             onClick={toggleFacingMode}
-            className="w-10 h-10 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-white flex items-center justify-center hover:bg-black/80 transition active:scale-95"
+            className="w-9 h-9 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-white flex items-center justify-center hover:bg-black/80 transition active:scale-95"
             title={t('flip_camera')}
           >
-            <SwitchCamera size={18} />
+            <SwitchCamera size={16} />
           </button>
         </div>
       </div>
