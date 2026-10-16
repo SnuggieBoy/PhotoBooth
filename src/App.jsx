@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import WelcomeScreen from './components/WelcomeScreen'
 import StyleSelectScreen from './components/StyleSelectScreen'
 import CameraView from './components/CameraView'
@@ -22,21 +22,37 @@ import { createDnp2x6SplitCanvas } from './utils/dnpKioskAdapter'
 import { atkinsonDither, buildEscPosPayload, printViaWebUsb } from './utils/thermalDither'
 import { useLanguage } from './i18n/LanguageContext'
 
+const SESSION_STORAGE_KEY = 'snuggie_photobooth_session_state'
+
+function loadSavedSession() {
+  try {
+    const raw = sessionStorage.getItem(SESSION_STORAGE_KEY)
+    if (raw) {
+      const data = JSON.parse(raw)
+      if (data && Array.isArray(data.photos) && data.photos.length > 0) {
+        return data
+      }
+    }
+  } catch {}
+  return null
+}
+
 export default function App() {
   const { t, language } = useLanguage()
+  const [savedSession] = useState(() => loadSavedSession())
 
   // 6 Dedicated Flow Screens: 'welcome' | 'style' | 'camera' | 'review' | 'decorate' | 'result'
-  const [step, setStep] = useState('welcome')
+  const [step, setStep] = useState(savedSession?.step || 'welcome')
 
   // Photobooth Configurations
-  const [layout, setLayout] = useState('strip-4') // 'strip-4' | 'grid-4' | 'strip-2'
+  const [layout, setLayout] = useState(savedSession?.layout || 'strip-4') // 'strip-4' | 'grid-4' | 'strip-2'
   const [selectedFilter, setSelectedFilter] = useState(FILTERS[1]) // Haru default
   const [frameColor, setFrameColor] = useState(FRAME_COLORS[0]) // White
   const [framePattern, setFramePattern] = useState(FRAME_PATTERNS[0]) // Solid default
   const [photoRadius, setPhotoRadius] = useState('12px')
   const [selectedCollabFrame, setSelectedCollabFrame] = useState(COLLAB_FRAMES[0]) // None
   const [countdownDuration, setCountdownDuration] = useState(3) // 3s
-  const [customText, setCustomText] = useState('SNUGGIE PHOTOBOOTH')
+  const [customText, setCustomText] = useState(savedSession?.customText || 'SNUGGIE PHOTOBOOTH')
 
   // Themed Frames & Custom Uploaded Frames State
   const [selectedFrame, setSelectedFrame] = useState(PRESET_FRAMES[0]) // Standard Clean default
@@ -49,7 +65,7 @@ export default function App() {
   const [isUltraWide, setIsUltraWide] = useState(false)
 
   // Captured Photos & Boomerang Video Buffers
-  const [photos, setPhotos] = useState([])
+  const [photos, setPhotos] = useState(savedSession?.photos || [])
   const [videoClips, setVideoClips] = useState([])
   const [currentShotIndex, setCurrentShotIndex] = useState(0)
 
@@ -107,6 +123,25 @@ export default function App() {
   const retakeTargetIndexRef = useRef(retakeTargetIndex)
   retakeTargetIndexRef.current = retakeTargetIndex
 
+  // Persist session to sessionStorage so accidental mobile browser reload never resets progress
+  useEffect(() => {
+    if (photos.length > 0 && (step === 'review' || step === 'decorate' || step === 'result')) {
+      try {
+        sessionStorage.setItem(
+          SESSION_STORAGE_KEY,
+          JSON.stringify({
+            step,
+            photos,
+            layout,
+            customText,
+          })
+        )
+      } catch (err) {
+        console.warn('Session persistence error:', err)
+      }
+    }
+  }, [step, photos, layout, customText])
+
   // Custom Frame Handlers
   const handleAddCustomFrame = (newFrame) => {
     setCustomFrames((prev) => [newFrame, ...prev.filter((f) => f.id !== newFrame.id)])
@@ -158,6 +193,9 @@ export default function App() {
 
   // Start fresh capture session from Style screen
   const handleStartCapture = () => {
+    try {
+      sessionStorage.removeItem(SESSION_STORAGE_KEY)
+    } catch {}
     photosRef.current = []
     videoClipsRef.current = []
     setPhotos([])
@@ -703,6 +741,9 @@ export default function App() {
 
   // Start fresh photobooth session
   const handleStartNewSession = () => {
+    try {
+      sessionStorage.removeItem(SESSION_STORAGE_KEY)
+    } catch {}
     setPhotos([])
     setVideoClips([])
     setCurrentShotIndex(0)

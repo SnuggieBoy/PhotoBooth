@@ -114,17 +114,32 @@ export default function CameraView({
     startCamera()
 
     return () => {
+      if (videoRef.current) {
+        try {
+          videoRef.current.pause()
+          videoRef.current.srcObject = null
+        } catch {}
+      }
       if (activeStream) {
-        activeStream.getTracks().forEach((track) => track.stop())
+        try {
+          activeStream.getTracks().forEach((track) => track.stop())
+        } catch {}
       }
       ringBufferRef.current.clear()
     }
   }, [facingMode])
 
-  // Sample pre-shot frames ONLY if WebCodecs VideoEncoder is supported (prevents iOS Safari Jetsam OOM crash)
+  // Sample pre-shot frames ONLY on desktop with WebCodecs (disabled on all mobile devices to prevent crashes)
   useEffect(() => {
     let sampleTimer = null
-    const canEncodeVideo = typeof window !== 'undefined' && 'VideoEncoder' in window
+    const isMobile =
+      typeof navigator !== 'undefined' &&
+      (/Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+        (typeof window !== 'undefined' &&
+          window.innerWidth < 1024 &&
+          ('ontouchstart' in window || navigator.maxTouchPoints > 0)))
+
+    const canEncodeVideo = !isMobile && typeof window !== 'undefined' && 'VideoEncoder' in window
 
     if (canEncodeVideo && shootingState === 'countdown') {
       sampleTimer = setInterval(async () => {
@@ -139,7 +154,7 @@ export default function CameraView({
         } catch {
           // ignore transient frame capture aborts
         }
-      }, 83) // ~12 fps saves 80% RAM and prevents mobile browser crashes
+      }, 83)
     }
 
     return () => {
@@ -308,12 +323,18 @@ export default function CameraView({
     setTimeout(() => setIsFlashing(false), 250)
 
     try {
-      // Snapshot canvas
-      // Snapshot canvas - capped to max 1280 to prevent excessive VRAM allocation on iOS Safari
+      // Snapshot canvas - capped to max 960 on mobile to prevent excessive VRAM allocation
+      const isMobile =
+        typeof navigator !== 'undefined' &&
+        (/Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+          (typeof window !== 'undefined' &&
+            window.innerWidth < 1024 &&
+            ('ontouchstart' in window || navigator.maxTouchPoints > 0)))
+
       const canvas = document.createElement('canvas')
       const rawWidth = video.videoWidth || 1280
       const rawHeight = video.videoHeight || 720
-      const maxDim = 1280
+      const maxDim = isMobile ? 960 : 1280
       const scale = Math.min(1, maxDim / Math.max(rawWidth, rawHeight))
       canvas.width = Math.round(rawWidth * scale)
       canvas.height = Math.round(rawHeight * scale)
@@ -328,22 +349,28 @@ export default function CameraView({
       }
 
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.88)
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.85)
 
-      // Extract captured frames for Boomerang MP4 safely without throwing
+      // Immediately zero canvas dimensions to release GPU backing memory
+      canvas.width = 0
+      canvas.height = 0
+
+      // Extract captured frames for Boomerang MP4 only on desktop
       let capturedVideoFrames = []
-      try {
-        if (ringBufferRef.current) {
-          if (typeof ringBufferRef.current.extractAndReset === 'function') {
-            capturedVideoFrames = ringBufferRef.current.extractAndReset()
-          } else if (typeof ringBufferRef.current.toArray === 'function') {
-            capturedVideoFrames = ringBufferRef.current.toArray()
-          } else if (typeof ringBufferRef.current.getFrames === 'function') {
-            capturedVideoFrames = ringBufferRef.current.getFrames()
+      if (!isMobile) {
+        try {
+          if (ringBufferRef.current) {
+            if (typeof ringBufferRef.current.extractAndReset === 'function') {
+              capturedVideoFrames = ringBufferRef.current.extractAndReset()
+            } else if (typeof ringBufferRef.current.toArray === 'function') {
+              capturedVideoFrames = ringBufferRef.current.toArray()
+            } else if (typeof ringBufferRef.current.getFrames === 'function') {
+              capturedVideoFrames = ringBufferRef.current.getFrames()
+            }
           }
+        } catch (bufErr) {
+          console.warn('Video buffer extraction failed:', bufErr)
         }
-      } catch (bufErr) {
-        console.warn('Video buffer extraction failed:', bufErr)
       }
 
       setTimeout(() => {
