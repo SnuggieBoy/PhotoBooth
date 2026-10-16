@@ -45,15 +45,26 @@ export default function ResultScreen({
 
   // Trigger celebratory confetti on screen entry
   useEffect(() => {
-    confetti({
-      particleCount: 100,
-      spread: 70,
-      origin: { y: 0.6 },
-      colors: ['#FF3D96', '#FFB8D0', '#DCD3FF', '#CDEBFF', '#FFE7A3'],
-    })
+    try {
+      if (typeof confetti === 'function') {
+        confetti({
+          particleCount: 80,
+          spread: 60,
+          origin: { y: 0.6 },
+          colors: ['#FF3D96', '#FFB8D0', '#DCD3FF', '#CDEBFF', '#FFE7A3'],
+        })
+      }
+    } catch (err) {
+      console.warn('Confetti error:', err)
+    }
   }, [])
 
-  const shareUrl = window.location.href
+  const shareUrl = typeof window !== 'undefined' && window.location?.href ? window.location.href : 'https://snuggie-photobooth.vercel.app'
+  const isBoomerangSupported = Boolean(
+    hasVideoClips &&
+    typeof window !== 'undefined' &&
+    'VideoEncoder' in window
+  )
 
   const handleNativeShare = async () => {
     if (navigator.share) {
@@ -150,7 +161,7 @@ export default function ResultScreen({
             </div>
 
             {/* 2. BOOMERANG MOVING PHOTO MP4 CARD */}
-            {hasVideoClips && (
+            {isBoomerangSupported && (
               <div className="bg-white border border-pink-100 rounded-3xl p-5 shadow-sm">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2.5">

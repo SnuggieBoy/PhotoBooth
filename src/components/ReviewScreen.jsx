@@ -2,13 +2,14 @@ import { Sparkles, RefreshCw, Camera, ArrowRight, ArrowLeft } from 'lucide-react
 import { useLanguage, LanguageSelector } from '../i18n/LanguageContext'
 
 export default function ReviewScreen({
-  photos,
+  photos = [],
   onRetakeSingle,
   onRetakeAll,
   onProceedDecorate,
   onBackToCamera,
 }) {
   const { t } = useLanguage()
+  const safePhotos = Array.isArray(photos) ? photos : []
 
   return (
     <div className="min-h-screen bg-[#FFFDF9] text-[#29252C] flex flex-col justify-between">
@@ -40,7 +41,7 @@ export default function ReviewScreen({
       <main className="max-w-4xl w-full mx-auto px-4 py-6 sm:py-8 flex-1 pb-28">
         <div className="text-center mb-6">
           <span className="text-xs font-black uppercase tracking-widest text-[#FF3D96] px-3 py-1 rounded-full bg-pink-100/70 border border-pink-200">
-            {photos.length} Poses Captured
+            {safePhotos.length} Poses Captured
           </span>
           <h3 className="text-xl sm:text-2xl font-black mt-2 text-[#29252C]">
             Khoảnh khắc của bạn đây rồi! ✨
@@ -53,12 +54,12 @@ export default function ReviewScreen({
         {/* Photos Grid */}
         <div
           className={`grid gap-4 sm:gap-6 ${
-            photos.length <= 2
+            safePhotos.length <= 2
               ? 'grid-cols-1 sm:grid-cols-2 max-w-2xl mx-auto'
               : 'grid-cols-2 max-w-3xl mx-auto'
           }`}
         >
-          {photos.map((photoUrl, idx) => (
+          {safePhotos.map((photoUrl, idx) => (
             <div
               key={idx}
               className="group relative bg-white border-2 border-pink-100 rounded-3xl p-3 shadow-md hover:shadow-xl hover:border-pink-300 transition-all duration-300 flex flex-col justify-between"

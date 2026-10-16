@@ -42,13 +42,14 @@ export default function PhotoStripPreview({
   const isCustomFrame = selectedFrame?.type === 'image' && selectedFrame?.imageUrl
   const hasThemedFrame = selectedFrame && selectedFrame.id !== 'none'
 
-  const activeBg = hasThemedFrame ? (selectedFrame.bg || frameColor.bg) : frameColor.bg
-  const activeTextColor = hasThemedFrame && selectedFrame.text ? selectedFrame.text : frameColor.text
-  const activeBorder = hasThemedFrame && selectedFrame.border ? selectedFrame.border : frameColor.border
-  const activeHeader = hasThemedFrame && selectedFrame.headerTitle ? selectedFrame.headerTitle : customText
+  const safeFrameColor = frameColor || { id: 'white', bg: '#ffffff', text: '#1e293b', border: '#e2e8f0' }
+  const activeBg = hasThemedFrame ? (selectedFrame.bg || safeFrameColor.bg) : (safeFrameColor.bg || '#ffffff')
+  const activeTextColor = hasThemedFrame && selectedFrame.text ? selectedFrame.text : (safeFrameColor.text || '#1e293b')
+  const activeBorder = hasThemedFrame && selectedFrame.border ? selectedFrame.border : (safeFrameColor.border || '#e2e8f0')
+  const activeHeader = hasThemedFrame && selectedFrame.headerTitle ? selectedFrame.headerTitle : (customText || 'SNUGGIE PHOTOBOOTH')
   const activeFooter = hasThemedFrame && selectedFrame.footerText ? selectedFrame.footerText : formattedDate
   const activePhotoBorder = hasThemedFrame ? selectedFrame.photoBorder : undefined
-  const decorations = hasThemedFrame ? selectedFrame.decorations : null
+  const decorations = hasThemedFrame && Array.isArray(selectedFrame.decorations) ? selectedFrame.decorations : null
 
   // Global PointerMove and PointerUp handlers for buttery smooth dragging
   useEffect(() => {
@@ -148,7 +149,7 @@ export default function PhotoStripPreview({
         )}
 
         {/* Film Negative Sprocket Holes (If film style selected) */}
-        {!hasThemedFrame && frameColor.isFilm && (
+        {!hasThemedFrame && safeFrameColor?.isFilm && (
           <div className="absolute top-2 bottom-2 left-1.5 flex flex-col justify-between pointer-events-none opacity-40 z-10">
             {Array.from({ length: 14 }).map((_, i) => (
               <span key={i} className="w-2 h-3.5 bg-neutral-800 rounded-xs mb-1" />
@@ -201,7 +202,7 @@ export default function PhotoStripPreview({
             layout === 'grid-4' || layout === 'grid-6' ? 'grid grid-cols-2' : 'flex flex-col'
           }`}
         >
-          {photos.map((photoUrl, idx) => (
+          {(photos || []).map((photoUrl, idx) => (
             <div
               key={idx}
               style={{
@@ -224,7 +225,7 @@ export default function PhotoStripPreview({
         </div>
 
         {/* Sticker Layer - Interactive Drag, Scale & Rotate */}
-        {stickers.map((stk) => {
+        {(stickers || []).map((stk) => {
           const isSelected = selectedStickerId === stk.id
           const scale = stk.scale || 1
           const rotation = stk.rotation || 0

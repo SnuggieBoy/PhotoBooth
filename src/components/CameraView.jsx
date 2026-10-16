@@ -43,7 +43,7 @@ export default function CameraView({
 }) {
   const { t } = useLanguage()
   const videoRef = useRef(null)
-  const ringBufferRef = useRef(new ShotRingBuffer(60))
+  const ringBufferRef = useRef(new ShotRingBuffer(20))
   const [stream, setStream] = useState(null)
 
   // Camera Settings
@@ -94,8 +94,8 @@ export default function CameraView({
         const mediaStream = await navigator.mediaDevices.getUserMedia({
           video: {
             facingMode,
-            width: { ideal: 1920 },
-            height: { ideal: 1080 },
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
           },
           audio: false,
         })
@@ -121,23 +121,25 @@ export default function CameraView({
     }
   }, [facingMode])
 
-  // Sample pre-shot frames at 24 fps during countdown for Boomerang
+  // Sample pre-shot frames ONLY if WebCodecs VideoEncoder is supported (prevents iOS Safari Jetsam OOM crash)
   useEffect(() => {
     let sampleTimer = null
-    if (shootingState === 'countdown') {
+    const canEncodeVideo = typeof window !== 'undefined' && 'VideoEncoder' in window
+
+    if (canEncodeVideo && shootingState === 'countdown') {
       sampleTimer = setInterval(async () => {
         const video = videoRef.current
         if (!video || video.readyState < 2) return
         try {
           const bitmap = await createImageBitmap(video, {
-            resizeWidth: 480,
-            resizeHeight: 360,
+            resizeWidth: 320,
+            resizeHeight: 240,
           })
           ringBufferRef.current.push(bitmap)
         } catch {
           // ignore transient frame capture aborts
         }
-      }, 41)
+      }, 83) // ~12 fps saves 80% RAM and prevents mobile browser crashes
     }
 
     return () => {
@@ -307,11 +309,14 @@ export default function CameraView({
 
     try {
       // Snapshot canvas
+      // Snapshot canvas - capped to max 1280 to prevent excessive VRAM allocation on iOS Safari
       const canvas = document.createElement('canvas')
-      const vWidth = video.videoWidth || 1280
-      const vHeight = video.videoHeight || 720
-      canvas.width = vWidth
-      canvas.height = vHeight
+      const rawWidth = video.videoWidth || 1280
+      const rawHeight = video.videoHeight || 720
+      const maxDim = 1280
+      const scale = Math.min(1, maxDim / Math.max(rawWidth, rawHeight))
+      canvas.width = Math.round(rawWidth * scale)
+      canvas.height = Math.round(rawHeight * scale)
 
       const ctx = canvas.getContext('2d')
       if (!ctx) throw new Error('Cannot acquire canvas 2D context')
@@ -323,7 +328,7 @@ export default function CameraView({
       }
 
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.95)
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.88)
 
       // Extract captured frames for Boomerang MP4 safely without throwing
       let capturedVideoFrames = []

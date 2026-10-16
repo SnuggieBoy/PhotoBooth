@@ -251,9 +251,18 @@ export default function App() {
     const canvas = document.createElement('canvas')
     const ctx = canvas.getContext('2d')
 
-    const isGrid = layout === 'grid-4'
-    const stripWidth = (isGrid ? 380 : 260) * scale
-    const stripHeight = (isGrid ? 520 : 760) * scale
+    const isGrid = layout === 'grid-4' || layout === 'grid-6'
+    let baseWidth = isGrid ? 380 : 260
+    let baseHeight = 760
+    if (layout === 'strip-2') baseHeight = 440
+    else if (layout === 'strip-3') baseHeight = 580
+    else if (layout === 'grid-4') baseHeight = 520
+    else if (layout === 'grid-6') baseHeight = 680
+    else if (layout === 'strip-6') baseHeight = 1100
+    else baseHeight = 760
+
+    const stripWidth = baseWidth * scale
+    const stripHeight = baseHeight * scale
 
     canvas.width = stripWidth
     canvas.height = stripHeight

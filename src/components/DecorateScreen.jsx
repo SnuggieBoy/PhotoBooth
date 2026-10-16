@@ -700,12 +700,12 @@ export default function DecorateScreen({
                         title={c.name}
                         style={{ backgroundColor: c.bg, borderColor: c.border }}
                         className={`h-9 rounded-xl border-2 flex items-center justify-center text-xs transition-transform cursor-pointer ${
-                          frameColor.id === c.id
+                          frameColor?.id === c.id
                             ? 'scale-105 ring-2 ring-[#FF3D96] shadow-sm'
                             : 'hover:scale-105'
                         }`}
                       >
-                        {frameColor.id === c.id && '✓'}
+                        {frameColor?.id === c.id && '✓'}
                       </button>
                     ))}
                   </div>
