@@ -22,37 +22,21 @@ import { createDnp2x6SplitCanvas } from './utils/dnpKioskAdapter'
 import { atkinsonDither, buildEscPosPayload, printViaWebUsb } from './utils/thermalDither'
 import { useLanguage } from './i18n/LanguageContext'
 
-const SESSION_STORAGE_KEY = 'snuggie_photobooth_session_state'
-
-function loadSavedSession() {
-  try {
-    const raw = sessionStorage.getItem(SESSION_STORAGE_KEY)
-    if (raw) {
-      const data = JSON.parse(raw)
-      if (data && Array.isArray(data.photos) && data.photos.length > 0) {
-        return data
-      }
-    }
-  } catch {}
-  return null
-}
-
 export default function App() {
   const { t, language } = useLanguage()
-  const [savedSession] = useState(() => loadSavedSession())
 
   // 6 Dedicated Flow Screens: 'welcome' | 'style' | 'camera' | 'review' | 'decorate' | 'result'
-  const [step, setStep] = useState(savedSession?.step || 'welcome')
+  const [step, setStep] = useState('welcome')
 
   // Photobooth Configurations
-  const [layout, setLayout] = useState(savedSession?.layout || 'strip-4') // 'strip-4' | 'grid-4' | 'strip-2'
+  const [layout, setLayout] = useState('strip-4') // 'strip-4' | 'grid-4' | 'strip-2'
   const [selectedFilter, setSelectedFilter] = useState(FILTERS[1]) // Haru default
   const [frameColor, setFrameColor] = useState(FRAME_COLORS[0]) // White
   const [framePattern, setFramePattern] = useState(FRAME_PATTERNS[0]) // Solid default
   const [photoRadius, setPhotoRadius] = useState('12px')
   const [selectedCollabFrame, setSelectedCollabFrame] = useState(COLLAB_FRAMES[0]) // None
   const [countdownDuration, setCountdownDuration] = useState(3) // 3s
-  const [customText, setCustomText] = useState(savedSession?.customText || 'SNUGGIE PHOTOBOOTH')
+  const [customText, setCustomText] = useState('SNUGGIE PHOTOBOOTH')
 
   // Themed Frames & Custom Uploaded Frames State
   const [selectedFrame, setSelectedFrame] = useState(PRESET_FRAMES[0]) // Standard Clean default
@@ -65,7 +49,7 @@ export default function App() {
   const [isUltraWide, setIsUltraWide] = useState(false)
 
   // Captured Photos & Boomerang Video Buffers
-  const [photos, setPhotos] = useState(savedSession?.photos || [])
+  const [photos, setPhotos] = useState([])
   const [videoClips, setVideoClips] = useState([])
   const [currentShotIndex, setCurrentShotIndex] = useState(0)
 
@@ -123,25 +107,6 @@ export default function App() {
   const retakeTargetIndexRef = useRef(retakeTargetIndex)
   retakeTargetIndexRef.current = retakeTargetIndex
 
-  // Persist session to sessionStorage so accidental mobile browser reload never resets progress
-  useEffect(() => {
-    if (photos.length > 0 && (step === 'review' || step === 'decorate' || step === 'result')) {
-      try {
-        sessionStorage.setItem(
-          SESSION_STORAGE_KEY,
-          JSON.stringify({
-            step,
-            photos,
-            layout,
-            customText,
-          })
-        )
-      } catch (err) {
-        console.warn('Session persistence error:', err)
-      }
-    }
-  }, [step, photos, layout, customText])
-
   // Custom Frame Handlers
   const handleAddCustomFrame = (newFrame) => {
     setCustomFrames((prev) => [newFrame, ...prev.filter((f) => f.id !== newFrame.id)])
@@ -193,9 +158,6 @@ export default function App() {
 
   // Start fresh capture session from Style screen
   const handleStartCapture = () => {
-    try {
-      sessionStorage.removeItem(SESSION_STORAGE_KEY)
-    } catch {}
     photosRef.current = []
     videoClipsRef.current = []
     setPhotos([])
@@ -741,9 +703,6 @@ export default function App() {
 
   // Start fresh photobooth session
   const handleStartNewSession = () => {
-    try {
-      sessionStorage.removeItem(SESSION_STORAGE_KEY)
-    } catch {}
     setPhotos([])
     setVideoClips([])
     setCurrentShotIndex(0)
@@ -793,78 +752,80 @@ export default function App() {
       )}
 
       {/* SCREEN 03: CAMERA CAPTURE SESSION */}
-      {step === 'camera' && (
-        <div className="min-h-[100dvh] bg-[#FFFDF9] flex flex-col justify-between px-2 py-1.5 sm:p-6 safe-top safe-bottom">
-          <div className="max-w-3xl w-full mx-auto space-y-2.5 sm:space-y-4 my-auto">
-            <div className="flex items-center justify-between px-2">
-              <button
-                onClick={() => setStep(retakeTargetIndex !== null ? 'review' : 'style')}
-                className="text-xs font-bold text-[#766F7B] hover:text-[#FF3D96] flex items-center gap-1 cursor-pointer transition active:scale-95"
-              >
-                ← {retakeTargetIndex !== null ? 'Quay lại xem ảnh' : 'Chọn lại phong cách'}
-              </button>
-              <div className="flex items-center gap-2 text-xs font-bold">
-                {selectedFrame?.id !== 'none' ? (
-                  <button
-                    onClick={() => setIsFrameModalOpen(true)}
-                    className="text-[#FF3D96] bg-pink-100 hover:bg-pink-200 px-2.5 py-0.5 rounded-full border border-pink-200 transition cursor-pointer flex items-center gap-1"
-                  >
-                    <span>🖼️</span>
-                    <span className="truncate max-w-[120px]">{selectedFrame.name}</span>
-                  </button>
-                ) : selectedCollabFrame.id !== 'none' ? (
-                  <span className="text-[#FF3D96] bg-pink-100 px-2.5 py-0.5 rounded-full border border-pink-200">
-                    {selectedCollabFrame.icon} {selectedCollabFrame.name}
+      {(step === 'camera' || step === 'review') && (
+        <div className={step === 'camera' ? 'block' : 'hidden'}>
+          <div className="min-h-[100dvh] bg-[#FFFDF9] flex flex-col justify-between px-2 py-1.5 sm:p-6 safe-top safe-bottom">
+            <div className="max-w-3xl w-full mx-auto space-y-2.5 sm:space-y-4 my-auto">
+              <div className="flex items-center justify-between px-2">
+                <button
+                  onClick={() => setStep(retakeTargetIndex !== null ? 'review' : 'style')}
+                  className="text-xs font-bold text-[#766F7B] hover:text-[#FF3D96] flex items-center gap-1 cursor-pointer transition active:scale-95"
+                >
+                  ← {retakeTargetIndex !== null ? 'Quay lại xem ảnh' : 'Chọn lại phong cách'}
+                </button>
+                <div className="flex items-center gap-2 text-xs font-bold">
+                  {selectedFrame?.id !== 'none' ? (
+                    <button
+                      onClick={() => setIsFrameModalOpen(true)}
+                      className="text-[#FF3D96] bg-pink-100 hover:bg-pink-200 px-2.5 py-0.5 rounded-full border border-pink-200 transition cursor-pointer flex items-center gap-1"
+                    >
+                      <span>🖼️</span>
+                      <span className="truncate max-w-[120px]">{selectedFrame.name}</span>
+                    </button>
+                  ) : selectedCollabFrame.id !== 'none' ? (
+                    <span className="text-[#FF3D96] bg-pink-100 px-2.5 py-0.5 rounded-full border border-pink-200">
+                      {selectedCollabFrame.icon} {selectedCollabFrame.name}
+                    </span>
+                  ) : null}
+                  <span className="text-[#FF3D96] bg-pink-50 px-2.5 py-0.5 rounded-full border border-pink-100">
+                    {t('active_filter')}: {t(selectedFilter.nameKey) || selectedFilter.name}
                   </span>
-                ) : null}
-                <span className="text-[#FF3D96] bg-pink-50 px-2.5 py-0.5 rounded-full border border-pink-100">
-                  {t('active_filter')}: {t(selectedFilter.nameKey) || selectedFilter.name}
-                </span>
+                </div>
               </div>
+
+              <CameraView
+                onPhotoTaken={handlePhotoTaken}
+                shotsCount={targetShotsCount}
+                currentShotIndex={retakeTargetIndex !== null ? retakeTargetIndex : currentShotIndex}
+                filterCss={selectedFilter.css}
+                countdownDuration={countdownDuration}
+                collabFrame={selectedCollabFrame.id}
+                isRetakingSingleShot={retakeTargetIndex !== null}
+                retakeIndex={retakeTargetIndex || 0}
+                selectedFrame={selectedFrame}
+                onOpenFrameModal={() => setIsFrameModalOpen(true)}
+                facingMode={facingMode}
+                setFacingMode={setFacingMode}
+                beautyLevel={beautyLevel}
+                setBeautyLevel={setBeautyLevel}
+                isUltraWide={isUltraWide}
+                setIsUltraWide={setIsUltraWide}
+              />
+
+              {/* Thumbnails of captured shots */}
+              {photos.length > 0 && retakeTargetIndex === null && (
+                <div className="flex items-center justify-center gap-2 pt-1 sm:pt-2">
+                  {Array.from({ length: targetShotsCount }).map((_, i) => (
+                    <div
+                      key={i}
+                      className="w-12 h-9 sm:w-16 sm:h-12 rounded-xl bg-white border border-pink-200 overflow-hidden shadow-xs"
+                    >
+                      {photos[i] ? (
+                        <img
+                          src={photos[i]}
+                          alt={`Pose ${i + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-[10px] text-pink-300 font-black">
+                          #{i + 1}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-
-            <CameraView
-              onPhotoTaken={handlePhotoTaken}
-              shotsCount={targetShotsCount}
-              currentShotIndex={retakeTargetIndex !== null ? retakeTargetIndex : currentShotIndex}
-              filterCss={selectedFilter.css}
-              countdownDuration={countdownDuration}
-              collabFrame={selectedCollabFrame.id}
-              isRetakingSingleShot={retakeTargetIndex !== null}
-              retakeIndex={retakeTargetIndex || 0}
-              selectedFrame={selectedFrame}
-              onOpenFrameModal={() => setIsFrameModalOpen(true)}
-              facingMode={facingMode}
-              setFacingMode={setFacingMode}
-              beautyLevel={beautyLevel}
-              setBeautyLevel={setBeautyLevel}
-              isUltraWide={isUltraWide}
-              setIsUltraWide={setIsUltraWide}
-            />
-
-            {/* Thumbnails of captured shots */}
-            {photos.length > 0 && retakeTargetIndex === null && (
-              <div className="flex items-center justify-center gap-2 pt-1 sm:pt-2">
-                {Array.from({ length: targetShotsCount }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="w-12 h-9 sm:w-16 sm:h-12 rounded-xl bg-white border border-pink-200 overflow-hidden shadow-xs"
-                  >
-                    {photos[i] ? (
-                      <img
-                        src={photos[i]}
-                        alt={`Pose ${i + 1}`}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-[10px] text-pink-300 font-black">
-                        #{i + 1}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
         </div>
       )}

@@ -114,12 +114,6 @@ export default function CameraView({
     startCamera()
 
     return () => {
-      if (videoRef.current) {
-        try {
-          videoRef.current.pause()
-          videoRef.current.srcObject = null
-        } catch {}
-      }
       if (activeStream) {
         try {
           activeStream.getTracks().forEach((track) => track.stop())
@@ -350,10 +344,6 @@ export default function CameraView({
 
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
       const dataUrl = canvas.toDataURL('image/jpeg', 0.85)
-
-      // Immediately zero canvas dimensions to release GPU backing memory
-      canvas.width = 0
-      canvas.height = 0
 
       // Extract captured frames for Boomerang MP4 only on desktop
       let capturedVideoFrames = []

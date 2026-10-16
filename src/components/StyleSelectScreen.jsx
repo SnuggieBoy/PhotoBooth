@@ -154,12 +154,6 @@ export default function StyleSelectScreen({
     startPreviewCamera()
 
     return () => {
-      if (videoRef.current) {
-        try {
-          videoRef.current.pause()
-          videoRef.current.srcObject = null
-        } catch {}
-      }
       if (activeStream) {
         try {
           activeStream.getTracks().forEach((track) => track.stop())
