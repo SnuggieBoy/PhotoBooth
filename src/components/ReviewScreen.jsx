@@ -69,7 +69,8 @@ export default function ReviewScreen({
                 <img
                   src={photoUrl}
                   alt={`Shot ${idx + 1}`}
-                  className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-300"
+                  loading="eager"
+                  className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300"
                 />
                 {/* Shot Number Badge */}
                 <div className="absolute top-2.5 left-2.5 bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-full text-[11px] font-black text-[#FF3D96] shadow-xs">

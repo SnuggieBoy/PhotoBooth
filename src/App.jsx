@@ -156,8 +156,22 @@ export default function App() {
     }
   }
 
+  // Helper to cleanly revoke Object URLs and prevent memory leaks
+  const revokePhotoUrls = (urls) => {
+    if (Array.isArray(urls)) {
+      urls.forEach((u) => {
+        if (typeof u === 'string' && u.startsWith('blob:')) {
+          try {
+            URL.revokeObjectURL(u)
+          } catch {}
+        }
+      })
+    }
+  }
+
   // Start fresh capture session from Style screen
   const handleStartCapture = () => {
+    revokePhotoUrls(photosRef.current)
     photosRef.current = []
     videoClipsRef.current = []
     setPhotos([])
@@ -615,12 +629,36 @@ export default function App() {
 
   // Export HD 300 DPI PNG
   const handleDownloadHD = async () => {
-    const canvas = await renderPhotoStripToCanvas(3)
+    const isMobile =
+      typeof navigator !== 'undefined' &&
+      (/Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+        (typeof window !== 'undefined' &&
+          window.innerWidth < 1024 &&
+          ('ontouchstart' in window || navigator.maxTouchPoints > 0)))
+    const scale = isMobile ? 2 : 3
+    const canvas = await renderPhotoStripToCanvas(scale)
     if (!canvas) return
-    const link = document.createElement('a')
-    link.download = `snuggie-photobooth-${Date.now()}.png`
-    link.href = canvas.toDataURL('image/png', 1.0)
-    link.click()
+
+    if (typeof canvas.toBlob === 'function') {
+      canvas.toBlob((blob) => {
+        if (!blob) return
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.download = `snuggie-photobooth-${Date.now()}.png`
+        link.href = url
+        link.click()
+        setTimeout(() => {
+          try {
+            URL.revokeObjectURL(url)
+          } catch {}
+        }, 8000)
+      }, 'image/png')
+    } else {
+      const link = document.createElement('a')
+      link.download = `snuggie-photobooth-${Date.now()}.png`
+      link.href = canvas.toDataURL('image/png', 1.0)
+      link.click()
+    }
   }
 
   // Export Boomerang MP4 with WebCodecs hardware encoder
@@ -703,6 +741,7 @@ export default function App() {
 
   // Start fresh photobooth session
   const handleStartNewSession = () => {
+    revokePhotoUrls(photosRef.current)
     setPhotos([])
     setVideoClips([])
     setCurrentShotIndex(0)
@@ -752,80 +791,78 @@ export default function App() {
       )}
 
       {/* SCREEN 03: CAMERA CAPTURE SESSION */}
-      {(step === 'camera' || step === 'review') && (
-        <div className={step === 'camera' ? 'block' : 'hidden'}>
-          <div className="min-h-[100dvh] bg-[#FFFDF9] flex flex-col justify-between px-2 py-1.5 sm:p-6 safe-top safe-bottom">
-            <div className="max-w-3xl w-full mx-auto space-y-2.5 sm:space-y-4 my-auto">
-              <div className="flex items-center justify-between px-2">
-                <button
-                  onClick={() => setStep(retakeTargetIndex !== null ? 'review' : 'style')}
-                  className="text-xs font-bold text-[#766F7B] hover:text-[#FF3D96] flex items-center gap-1 cursor-pointer transition active:scale-95"
-                >
-                  ← {retakeTargetIndex !== null ? 'Quay lại xem ảnh' : 'Chọn lại phong cách'}
-                </button>
-                <div className="flex items-center gap-2 text-xs font-bold">
-                  {selectedFrame?.id !== 'none' ? (
-                    <button
-                      onClick={() => setIsFrameModalOpen(true)}
-                      className="text-[#FF3D96] bg-pink-100 hover:bg-pink-200 px-2.5 py-0.5 rounded-full border border-pink-200 transition cursor-pointer flex items-center gap-1"
-                    >
-                      <span>🖼️</span>
-                      <span className="truncate max-w-[120px]">{selectedFrame.name}</span>
-                    </button>
-                  ) : selectedCollabFrame.id !== 'none' ? (
-                    <span className="text-[#FF3D96] bg-pink-100 px-2.5 py-0.5 rounded-full border border-pink-200">
-                      {selectedCollabFrame.icon} {selectedCollabFrame.name}
-                    </span>
-                  ) : null}
-                  <span className="text-[#FF3D96] bg-pink-50 px-2.5 py-0.5 rounded-full border border-pink-100">
-                    {t('active_filter')}: {t(selectedFilter.nameKey) || selectedFilter.name}
+      {step === 'camera' && (
+        <div className="min-h-[100dvh] bg-[#FFFDF9] flex flex-col justify-between px-2 py-1.5 sm:p-6 safe-top safe-bottom">
+          <div className="max-w-3xl w-full mx-auto space-y-2.5 sm:space-y-4 my-auto">
+            <div className="flex items-center justify-between px-2">
+              <button
+                onClick={() => setStep(retakeTargetIndex !== null ? 'review' : 'style')}
+                className="text-xs font-bold text-[#766F7B] hover:text-[#FF3D96] flex items-center gap-1 cursor-pointer transition active:scale-95"
+              >
+                ← {retakeTargetIndex !== null ? 'Quay lại xem ảnh' : 'Chọn lại phong cách'}
+              </button>
+              <div className="flex items-center gap-2 text-xs font-bold">
+                {selectedFrame?.id !== 'none' ? (
+                  <button
+                    onClick={() => setIsFrameModalOpen(true)}
+                    className="text-[#FF3D96] bg-pink-100 hover:bg-pink-200 px-2.5 py-0.5 rounded-full border border-pink-200 transition cursor-pointer flex items-center gap-1"
+                  >
+                    <span>🖼️</span>
+                    <span className="truncate max-w-[120px]">{selectedFrame.name}</span>
+                  </button>
+                ) : selectedCollabFrame.id !== 'none' ? (
+                  <span className="text-[#FF3D96] bg-pink-100 px-2.5 py-0.5 rounded-full border border-pink-200">
+                    {selectedCollabFrame.icon} {selectedCollabFrame.name}
                   </span>
-                </div>
+                ) : null}
+                <span className="text-[#FF3D96] bg-pink-50 px-2.5 py-0.5 rounded-full border border-pink-100">
+                  {t('active_filter')}: {t(selectedFilter.nameKey) || selectedFilter.name}
+                </span>
               </div>
-
-              <CameraView
-                onPhotoTaken={handlePhotoTaken}
-                shotsCount={targetShotsCount}
-                currentShotIndex={retakeTargetIndex !== null ? retakeTargetIndex : currentShotIndex}
-                filterCss={selectedFilter.css}
-                countdownDuration={countdownDuration}
-                collabFrame={selectedCollabFrame.id}
-                isRetakingSingleShot={retakeTargetIndex !== null}
-                retakeIndex={retakeTargetIndex || 0}
-                selectedFrame={selectedFrame}
-                onOpenFrameModal={() => setIsFrameModalOpen(true)}
-                facingMode={facingMode}
-                setFacingMode={setFacingMode}
-                beautyLevel={beautyLevel}
-                setBeautyLevel={setBeautyLevel}
-                isUltraWide={isUltraWide}
-                setIsUltraWide={setIsUltraWide}
-              />
-
-              {/* Thumbnails of captured shots */}
-              {photos.length > 0 && retakeTargetIndex === null && (
-                <div className="flex items-center justify-center gap-2 pt-1 sm:pt-2">
-                  {Array.from({ length: targetShotsCount }).map((_, i) => (
-                    <div
-                      key={i}
-                      className="w-12 h-9 sm:w-16 sm:h-12 rounded-xl bg-white border border-pink-200 overflow-hidden shadow-xs"
-                    >
-                      {photos[i] ? (
-                        <img
-                          src={photos[i]}
-                          alt={`Pose ${i + 1}`}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-[10px] text-pink-300 font-black">
-                          #{i + 1}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
+
+            <CameraView
+              onPhotoTaken={handlePhotoTaken}
+              shotsCount={targetShotsCount}
+              currentShotIndex={retakeTargetIndex !== null ? retakeTargetIndex : currentShotIndex}
+              filterCss={selectedFilter.css}
+              countdownDuration={countdownDuration}
+              collabFrame={selectedCollabFrame.id}
+              isRetakingSingleShot={retakeTargetIndex !== null}
+              retakeIndex={retakeTargetIndex || 0}
+              selectedFrame={selectedFrame}
+              onOpenFrameModal={() => setIsFrameModalOpen(true)}
+              facingMode={facingMode}
+              setFacingMode={setFacingMode}
+              beautyLevel={beautyLevel}
+              setBeautyLevel={setBeautyLevel}
+              isUltraWide={isUltraWide}
+              setIsUltraWide={setIsUltraWide}
+            />
+
+            {/* Thumbnails of captured shots */}
+            {photos.length > 0 && retakeTargetIndex === null && (
+              <div className="flex items-center justify-center gap-2 pt-1 sm:pt-2">
+                {Array.from({ length: targetShotsCount }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="w-12 h-9 sm:w-16 sm:h-12 rounded-xl bg-white border border-pink-200 overflow-hidden shadow-xs"
+                  >
+                    {photos[i] ? (
+                      <img
+                        src={photos[i]}
+                        alt={`Pose ${i + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-[10px] text-pink-300 font-black">
+                        #{i + 1}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}

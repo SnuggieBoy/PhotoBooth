@@ -114,6 +114,11 @@ export default function CameraView({
     startCamera()
 
     return () => {
+      if (videoRef.current) {
+        try {
+          videoRef.current.srcObject = null
+        } catch {}
+      }
       if (activeStream) {
         try {
           activeStream.getTracks().forEach((track) => track.stop())
@@ -343,7 +348,27 @@ export default function CameraView({
       }
 
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.85)
+
+      // Convert canvas to lightweight Blob URL to eliminate iOS WebKit memory spikes & Jetsam OOM kills
+      const extractPhotoUrl = () => {
+        return new Promise((resolve) => {
+          if (typeof canvas.toBlob === 'function') {
+            canvas.toBlob(
+              (blob) => {
+                if (blob) {
+                  resolve(URL.createObjectURL(blob))
+                } else {
+                  resolve(canvas.toDataURL('image/jpeg', 0.85))
+                }
+              },
+              'image/jpeg',
+              0.85
+            )
+          } else {
+            resolve(canvas.toDataURL('image/jpeg', 0.85))
+          }
+        })
+      }
 
       // Extract captured frames for Boomerang MP4 only on desktop
       let capturedVideoFrames = []
@@ -363,36 +388,49 @@ export default function CameraView({
         }
       }
 
-      setTimeout(() => {
-        // Reset countdown cleanly so it NEVER gets stuck at 0
-        setCountdown(countdownDurationRef.current)
+      extractPhotoUrl().then((photoUrl) => {
+        setTimeout(() => {
+          // Reset countdown cleanly so it NEVER gets stuck at 0
+          setCountdown(countdownDurationRef.current)
 
-        const currentPose = shotIndexRef.current
-        const nextPose = currentPose + 1
-        shotIndexRef.current = nextPose
+          const currentPose = shotIndexRef.current
+          const nextPose = currentPose + 1
+          shotIndexRef.current = nextPose
 
-        const isLastShot =
-          isRetakingSingleShotRef.current ||
-          nextPose >= shotsCountRef.current
+          const isLastShot =
+            isRetakingSingleShotRef.current ||
+            nextPose >= shotsCountRef.current
 
-        if (isLastShot) {
-          setShootingState('idle')
-        } else if (!isAutoSequenceRef.current) {
-          setShootingState('idle')
-        } else {
-          // Immediately enter pose transition break for next pose
-          setShootingState('pose_transition')
-          startPoseBreak()
-        }
-
-        try {
-          if (onPhotoTakenRef.current) {
-            onPhotoTakenRef.current(dataUrl, capturedVideoFrames)
+          if (isLastShot) {
+            setShootingState('idle')
+            // CRITICAL FOR IOS SAFARI: Stop camera hardware cleanly BEFORE notifying parent to unmount
+            if (videoRef.current) {
+              try {
+                videoRef.current.srcObject = null
+              } catch {}
+            }
+            if (stream) {
+              try {
+                stream.getTracks().forEach((track) => track.stop())
+              } catch {}
+            }
+          } else if (!isAutoSequenceRef.current) {
+            setShootingState('idle')
+          } else {
+            // Immediately enter pose transition break for next pose
+            setShootingState('pose_transition')
+            startPoseBreak()
           }
-        } catch (callbackErr) {
-          console.error('onPhotoTaken error:', callbackErr)
-        }
-      }, 300)
+
+          try {
+            if (onPhotoTakenRef.current) {
+              onPhotoTakenRef.current(photoUrl, capturedVideoFrames)
+            }
+          } catch (callbackErr) {
+            console.error('onPhotoTaken error:', callbackErr)
+          }
+        }, 300)
+      })
     } catch (err) {
       console.error('Fatal snapshot capture error:', err)
       setShootingState('idle')
